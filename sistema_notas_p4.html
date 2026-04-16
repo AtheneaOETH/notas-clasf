@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mirai Analyst · Sistema de Notas — Período 4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;0,800;1,300&display=swap" rel="stylesheet">
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, orderBy }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ── CONFIGURACIÓN FIREBASE ─────────────────────────────────────────────────
+// Reemplaza con tu configuración real de Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyCER29CHCa7bjJv86RSzVcqWzWsXiFa_Rc",
+  authDomain: "clasfnotas-ea47c.firebaseapp.com",
+  projectId: "clasfnotas-ea47c",
+  storageBucket: "clasfnotas-ea47c.firebasestorage.app",
+  messagingSenderId: "526878281411",
+  appId: "1:526878281411:web:5bae22090d1be100739c76"
+};
+
+const DOCENTE_AUTORIZADO = "morenofabian.documentosclasf@gmail.com";
+const PERIODO = 4;
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ login_hint: DOCENTE_AUTORIZADO });
+
+// ── BASE DE DATOS DE ESTUDIANTES ───────────────────────────────────────────
+const ESTUDIANTES = {"1A":["CARDONA LARA VALENTINO","CASALLAS PACHECO ISABELLA","CASTRO DIAZ MAXIMILIANO","ALVAREZ COCUY ANTHUAN","DAGUA CARABALI LUCIANA","DIAZ GARCES LAUREN TATIANA","ISAZA ZULUAGA MIA LUCIANA","MARTIN HURTADO MARIA SALOME","RENGIFO MARTINEZ ANTONELLA","MURILLO BEDOYA SOFIA","NARVAEZ ZAPATA JERONIMO","PAZ RIVAS LIAM MATIAS","RIVERA FLOREZ LUCIANA","RODAS MUÑOZ ANTONELLA","RODRIGUEZ ARANGO SAMANTHA","ROJAS JIMENEZ VALERIA","SANCHEZ MONTAÑO THELMA SOPHIA"],"1B":["ARANGO VELEZ THIAGO","ARIAS SERRATO EMILIANO","BUENO SAAVEDRA ANTONIELLA","BURGOS TORRES SUSANA","CASTAÑO BENITO ARIADNA","CASTILLO PINZON VALERIA","GIRALDO MARTINEZ EMILIANO","HOYOS GONZALEZ DOMINICK","MARTINEZ MONDRAGON VALENTINA","MONTOYA VALLEJO JERONIMO","MOSQUERA ARCILA SANTIAGO","RENGIFO MARTINEZ ANTONELLA","SILVA MEDINA ANTONELLA","SOTO ERAZO ANGEL MATIAS","TROCHEZ BATERO CRISTOPHER","URREGO VARGAS PEYTHON","VALENCIA ASTAIZA ANTONELLA","VALENCIA GIRALDO MARTIN"],"2A":["ALONSO VARGAS AINHARA","AYA LONDOÑO GABRIELA","BECOCHE PINO SUSANA","BOLAÑOS FRANCO DYLAN","BOLAÑOS DURANGO ABIGAIL","CARVAJAL GUEVARA JULIANA","CASTRO JEREMY DANIEL","CONDO GONGACHA YAEL","LOPEZ GOMEZ OLIVIA","MERCEDES VENTE ARIANA","MORIBE MARTINEZ YUNA","ORTIZ ANGOLA ALEJANDRO ISAAC","PAEZ AGUILAR ZOE","PASTRANA ARANA CHRISTOPHER","SANCHEZ RAMOS PAOLO RICARDO","SOLIS CALDERON IAN SEBASTIAN","TABIMA LOPEZ DEREK","TORO AHUNCA MATIAS","VARGAS HENAO JACOBO"],"2B":["ARIAS MOLINA MATTEO","BORJA OSPINA EMILIA","BURGOS OVIYUS MARIA CAMILA","CARDONA BETANCOURT ANA SOFIA","CARRILLO VALENZUELA MARIANGEL","DIAZ VILLADA SAMARA","LABRADA GARCIA MATIAS","MOSQUERA SAYA MATIAS","PEREZ PINCHAO ARIATNA SOPHIA","RAMOS OSORIO KAUDER","RENGIFO SOTO GABRIELA","ROJAS OSSO MARIANGEL","VALENCIA CAICEDO ANGELLO","VALENCIA LOURIDO EMMANUEL","VALLADALES ROJAS LIAM","VIVEROS CRIOLLO EMMANUEL"],"3":["ALBAN VASQUEZ GABRIELA","ARIAS MORA SOFIA","BERMUDEZ OSORIO ARIADNA CAROLINA","CALLE GOMEZ DOMINIC","CARDONA LARA MAXIMILIANO","CASTRO DIEZ ISAAC","CEDEÑO CHEMA MATIAS","CERON GONZALEZ MARIANA","CORDOBA MORALES LOUIS MATHEUS","DE LA ROSA PAYAN LUCIA","DIAZ ROSERO GERONIMO","DUQUE CASTAÑO ALLISON","LUCAS CORREA ALANA","MARIN CASANOVA JUAN PABLO","MORENO CABRERA SAMUEL","MURILLO BEDOYA MARIANA","PACHECO PEÑA SALOME","PALACIO FORERO JOSE DAVID","PEÑA JIMENEZ MARTIN","PRADO GALLEGO SALOME","QUESADA CARMONA AYLIN","SALCEDO RESTREPO GABRIELA","SARRIA MOLINA DYLAN","TAPASCO RODRIGUEZ EMMANUEL","TREJOS LULIGO MARTIN ANDRES","VALBUENA OSPINA SARAY"],"4A":["AGUILAR JOJOA EMILY ANDREA","CASTAÑEDA OCHOA VALENTINA","CHAVEZ MOLINA ALEJANDRO","CONDO CONGACHA ALAN JHOSUE","DEL SALTO MUÑOZ CRISSELAIN","GUZMAN CARREÑO SARAY","LOPEZ TORRES GUADALUPE","MORALES RAMIREZ JUAN JOSE","MORENO NUÑEZ JUAN DAVID","OROZCO MARTINEZ ANJALI","ORTIZ CASTAÑO MARIA FERNANDA","PEREA ACOSTA LUCAS","PEREZ CASTRO JERONIMO","PORTILLO CASTAÑO SARAH SOFIA","SEVILLANO POTES DHILYS SAHOMI","TORO MARTINEZ JUAN SEBASTIAN","VERA GIRALDO MIGUEL ANGEL"],"4B":["AYA LONDOÑO GUADALUPE","CAICEDO FALLA ANA BELEN","CARDONA SOLARTE GABRIELA","CARMONA GONZALEZ SOFIA","CRUZ MUÑOZ SARA","CUARTAS CAPOTE VALENTINA","GIRALDO ABRIL ANTONIA","MALDONADO CARDONA ASHANTY MERCEDES","PEREZ AGREDO SAMUEL","RAMIREZ HERNANDEZ SELENA","SENDOYA MACIAS GABRIELA","UMENSA PALACIOS FELIPE","VARGAS FRESNEDA NATHAN","VELASCO MOMPOTES JERÓNIMO","GIL SOFIA","VALENCIA GALEANO MATIAS","NARVAEZ HERNANDEZ ISABELLA"],"5A":["ALCALDE SALAZAR ALEJANDRO","ALZATE OSPINA JERONIMO","BALANTA GIRALDO SANTIAGO","BECOCHE PINO MARIANA","BETANCUR ANGULO MATEO","BORJA BURBANO LUCIANA","CABRERA CARDENAS SAMARA","CARDONA CUASQUEN VALENTINA","LEBAZA SOLANO SAMUEL","MACIAS BENAVIDES GABRIELA","SERRANO GUTIERREZ LUCIANA","TORRES LENIS LUCIANA","VALLEJO GARCES SARA","ZAPATA CORTES NIKOL DAHIAN"],"5B":["ARIAS NARVAEZ SAMUEL","BOGOTA CAICEDO CHRISTOPHER ALEXANDER","GONZALEZ DURANGO SAMUEL","GRISALES PEREZ SEBASTIAN","GUERRERO FIGUEROA VALERY","HENAO HERRERA ISABELLA","HERNANDEZ OROZCO SOFIA","LOPEZ RAMIREZ ELIVEN","MEDINA GARCIA MATHIAS","MORA ARCE SOFIA","PADILLA HERRAN ALEJANDRO"],"6A":["ALVAREZ ACEVEDO SARA","AREVALO CASTRO JUAN JOSE","CASTILLO MORALES YOSEF BEN DAVID","CASTRO LOPEZ THOMAS SANTIAGO","ENRIQUEZ RODRIGUEZ MARIA PAULA","GARCIA ESTUPIÑAN ISABELLA","HERRERA PARUMA JOSE MARTIN","LORA GUTIERREZ ANTU","LORA RAMOS JUAN FELIPE","MARTINEZ GOMEZ DANIEL","MENDEZ ZAMBRANO JUAN ALEXANDER","MORENO MARIN LUCIANA","MUÑOZ SILVA MARIANA","NOGUERA RAMOS JULIANA","OTALORA MARIA ALEJANDRA","PEREZ AGREDO MARIANA","RAMIREZ MORERA SARA SOFIA","RAMIREZ NIETO JOSE MATIAS","RENDON ATEHORTUA MATIAS","RENGIFO DIAZ JACOBO","RIVERA GARCIA SALOME","RODRIGUEZ APONTE ANA MARIA","TORO AHUNCA SEBASTIAN","TORRES GAMBOA SARA ISABEL","VALENCIA ASTUDILLO SALOME","VALENCIA VALENCIA EMMANUEL"],"6B":["ALBAN VASQUEZ ELIZABETH","ASTUDILLO CORDOBA SARA SOFIA","CANSIMANSE ROMERO DANNA","CARVAJAL GUEVARA ISABELLA","CUCAITA ROMERO JOAQUIN","DUQUE LULIGO DYLAN ANDRES","GAMA AGUIRRE JUAN JOSE","GARIBELLO CALDON SARAH SOPHIA","GRANADA PEREIRA SALOME","IMBACHI VILLADA JACOBO","INSUASTY DUQUE SARA LUCIA","JANSASOY GUAZA LAURA SOFIA","LONDOÑO CARRIAZO MATIAS","MALDONADO CARDONA LIA","PALACIO FORERO JACOB","QUICENO CAYCEDO VIOLETTA","QUINTERO CRIOLLO LUIS ANGEL","QUIÑONEZ VALENCIA GABRIELA","RENGIFO SOTELO MARIA JULIANA","RODRIGUEZ CRUZ MARIANA","ROSERO TORRES HANSEL DANIEL","SARRIA MOLINA JUAN ESTEBAN","SUAREZ MEDINA GLORIA NICOL","VIVAS RESTREPO GUSTAVO ADRIAN"],"7A":["BETANCOURTH PUETATE JULIANA","BONILLA MARTINEZ DULCE MARIA","CAMPOS MENESES ZARETH DUVELIS","CARDONA OSPITIA MATHIAS","CORDOBA BEDOYA MIGUEL ANGEL","DIAZ PALACIO DANNA SOFIA","GOMEZ VALENCIA JUAN JOSE","GUTIERREZ PEREA AMELIE","LOPEZ PACHECO LUIZA VALENTINA","LOSADA HERNANDEZ DULCE MARIA","MENESES IZQUIERDO SOFIA IRENE","MORENO MOSQUERA ALEXANDRA JIRETH","MOSQUERA SANCHEZ VALERY","PEÑA ARCE GENARO ANDRES","RAMIREZ BAUTISTA SAMANTHA","RAMIREZ MUÑOZ ISABELLA","ROMERO OVALLE GABRIEL MATHIAS","SEPULVEDA NOREÑA MATEO","TAPASCO RODRIGUEZ JUAN JOSE","QUIROZ COLLAZOS DAILA VERONICA"],"7B":["AGUIRRE DOMINGUEZ ALIAH","ARIAS COBO HANNA","BERRIO SANDOVAL SANTIAGO","BRICEÑO ANTE LUCIANA","CABRERA CARDENAS SARA","CASAS RODRIGUEZ EMMANUEL","FRANCO CABRERA ISABELLA","GOMEZ GOMEZ VALERIA","GRUESO CARO GUADALUPE","HERNANDEZ GONZALEZ EMMANUEL","HERRERA MARIN ARIANA","IMBACHI BURBANO SAMUEL CAMILO","LOPEZ ZULUAGA ANTONIA","PACHECO PEÑA YAMID SANTIAGO","RAMOS VILLAQUIRAN SAMUEL","RICAURTE LOPEZ ANTONELLA","SANCHEZ ORDOÑEZ JOHAN ESTEBAN","VILLEGAS RAMIREZ TOMAS","VILLOTA CAICEDO SAMUEL"],"8A":["CABRERA CARDENAS NICOLE SOFIA","DEL SALTO MUÑOZ SEBASTIAN","ESCOBAR GALLEGO FREDDY ALEXANDER","FERNANDEZ ZAMBRANO SANTIAGO","GARCIA POTES MATIAS","GARCIA SALAZAR JACOBO ANDRES","LEDESMA PINILLOS JHOSEPH RODNNY","LOPEZ RAMIREZ LUCIANA","NASTAR RIOS CHRISTOPHER","ORDOÑEZ CHEMA HUGO ANDRES","OREJUELA SERNA MARTIN","PATIÑO LEDESMA KAROL ARIANNA","PERAFAN LLORENTE LUCAS","REPIZO TRUJILLO JUAN SEBASTIAN","RODRIGUEZ CASTRO ISABELLA","RODRIGUEZ SUAREZ JUAN JOSE","VICTORIA NAVARRETE JOAQUIN","ZAFRANE CARVAJAL STEVE"],"8B":["ARELLANO AGUILAR SARA","BALANTA GIRALDO ARIADNA SOFIA","BENAVIDES SERRATE SOFIA","BORJA OSPINA VALENTINA","BRAVO MARTINEZ SALOME","CAICEDO FALLA MARIA JOSE","CARDONA RIVERA MARIANA","CARRILLO VALENZUELA MIGUEL ANGEL","CIFUENTES BOHORQUEZ SAMUEL","FERNANDEZ RODRIGUEZ SEBASTIAN","GARIBELLO RODRIGUEZ ASHLY SARAY","GOMEZ TORO SIMON","GUZMAN CARREÑO SOFIA","MINOTTA PEDROZA SHAIRA ANDREA","SANABRIA SALAZAR ZAIRA KATALEYA","SEVILLANO POTES RACHEL ZULEY","VASQUEZ MORENO VALERIA","VILLOTA CAICEDO LAURA SOFIA","BRIGITTE GARZON CARDONA"],"9A":["CASTAÑO SERNA MATIAS","DOMINGOS CRIOLLO YANNI THALYANA","GARAY JIMENEZ MARIANA","JARAMILLO BENAVIDEZ CARLOS MARIO","MOLINA MORENO CAMILA DEL PILAR","MORA CHIRIMUSCAY VALERY","MURILLO CHIRIMUSCAY JULIANA","PELAEZ PEÑA SARAY","TABIMA LOPEZ MELANIE NATALY","UMAÑA PEREZ GABRIEL"],"9B":["AGUILAR JOJOA RONALD ARLEY","BETANCOURT MEJIA ERIKA SOFIA","CASTRILLON DORADO GABRIELA","CORTES ZUÑIGA ESTEBAN","DELGADO CABEZAS ISABELLA","GUEVARA RAYO MARIA ALEJANDRA","MORA ARCE MARIANA","MOSQUERA ARCILA SEBASTIAN","PEREA FLOREZ MARION SOFIA","POBRE CASTRO JUAN MANUEL","SANCHEZ GIRALDO JUAN DAVID","SANDOVAL CHAVESTAN HARRYSON","VALDES RODRIGUEZ JUAN PABLO","VELEZ ERAZO NICOLAS","VILLAVICENCIO SANTAMARIA DANIELA"],"10A":["ACOSTA OIDOR MELISSA","AGUDELO HENAO LINDESLY NICOL","ALARCON CASTILLO VALERY NICOLE","ANGULO MEDINA ANA ISABEL","CARO GUTIERREZ GABRIELA","CEBALLOS CASTRO MIGUEL ANGEL","CORTEZ URREA MARIA JOSE","FLOREZ GUZMAN GRECIA DEL VALLE","GACHARNA ORTIZ LAURA ISABELLA","GAÑAN DIAZ ANDREA","GARCIA POTES NICOLAS FABRICCIO","GUERRERO AGUIRRE SARA CATALINA","MACIAS ALVAREZ ISABELLA","MARTINEZ VARGAS SARA AINHOA","MONTENEGRO GAVIRIA JOSE MANUEL","RODRIGUEZ ZAMBRANO JUAN ESTEBAN","ROMERO CUERVO RADHA PRIYA","TORRES LENIS DANIEL","VARGAS MONTES SAMUEL ANDRES","VELEZ MUÑOZ JUAN SEBASTIAN","ZAPATA RAMIREZ LUIS GUILLERMO","ZAPATA REYES MARIA JOSE"],"10B":["ACOSTA ROJAS MARIANA","CASTRO PEÑA JUAN DAVID","CUJAR MORENO MARIA JOSE","FLOREZ GUZMAN LUIS FERNANDO","GELVEZ OYAGA SEBASTIAN ALEJANDRO","GIRALDO CASTAÑO CATALINA","GIRALDO PEÑA SAMUEL","GUZMAN RAMOS ANTONIO","LOPEZ GUERRERO KAREN SOFIA","LUGO TOBON JUAN MARTIN","PABLOT MARTINEZ VALENTINA","PERAFAN LLORENTE PEDRO","PERDOMO GUEVARA LAURA SOFIA","QUIÑONES QUINTERO DANIA SARAY","REITA GUEVARA SAMUEL ANDRES","RIVERA DELGADO JUAN ANDRES","ROSALES PERLAZA JUAN JOSE","SOLARTE DURAN JEAN DANEL","SOTO COLORADO MARIA DE LOS ANGELES","TORO GONZALEZ ISABELLA","VALBUENA OSPINA ANGIE MICHEL","VARELA JORDAN JUAN JOSE"],"11A":["ALZATE ORTIZ EMILY","AQUITE ALDANA MARIA JOSE","ARBOLEDA CIFUENTES ANGELICA","BARBOSA QUINTERO NICOLAS ADRIAN","BEDOYA CABRERA ISABELLA","BELTRAN TOLOZA SAHARA LUCIA","BENJUMEA RENDO SAMUEL","BUENO RODRIGUEZ ISABEL SOFIA","CASTRO GUZMAN ISABEL CRISTINA","CORDOBA PALOMINO CARLOS DAVID","ECHEVERRI SERRATO SAMUEL","FILIGRANA RODRIGUZ SAMUEL","GIRALDO PUERTA CAMILA","GIRALDO VARGAS SOFIA","GONZALEZ ERAZO MARIA CAMILA","GORDILLO SILVA JOSE JULIAN","HERNANDEZ MARIN NICOLAS","MENDEZ PEREZ JUAN MANUEL","NOREÑA GOMEZ JUAN DIEGO","PAZ FLOREZ GABRIELA","RAMIREZ BOCANEGRA VALENTINA","RAMIREZ MARTINEZ VALERIA","ROJAS PAZ NICOLLE SOFIA","VALENCIA VALENCIA SHARAY"],"11B":["ANTE LOPEZ NICOLL","BLANCO ECHEVERRY MARIANA","CADAVID GARCIA ISABEL SOFIA","CAMPOS TROCHEZ ANA SOFIA","CANSIMANSI ROMERO JUAN ESTEBAN","CARDONA VELASCO EMMANUEL","CARVAJAL CABEZAS JOSUE VICHENZO","COBO TORRES ELLA SARAY","DIEZ LIBREROS ISABELLA","GARCIA PEREZ MARLON ABDUL","GONZALEZ ROSERO GABRIELA","GUERRERO ABRIL CAROLINE","JIMENEZ ALVARADO JERONIMO","JIMENEZ DELGADO SAMUEL YAHEH","LOZANO RUIZ ALEXANDER","OROZCO GUEVARA AURORA YIREH","RAMIREZ NIETO JUAN MARTIN","SINISTERRA PARRA SARA","SOGAMOSO ESCOBAR NICOLE","ZAPATA MEDINA MARIANGEL"]};
+
+const GRUPOS_ORDEN = ["1A","1B","2A","2B","3","4A","4B","5A","5B","6A","6B","7A","7B","8A","8B","9A","9B","10A","10B","11A","11B"];
+const CODIGOS_ESPECIALES = ["NP","AUS","EXC","PLA","IA"];
+const MIN_APROBATORIO = 3.8;
+
+// ── ESTADO GLOBAL ──────────────────────────────────────────────────────────
+let currentUser = null;
+let currentGrupo = null;
+let configGrupo = null; // {modo, actividades:[{letra, nombre, peso}]}
+let notasCache = {}; // grupoId -> {estudiante -> {actividadLetra -> valor, coe, het, pau, auto}}
+
+// ── UTILIDADES DE CÁLCULO ──────────────────────────────────────────────────
+function valorNumerico(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'number') return v;
+  const s = String(v).trim().toUpperCase();
+  if (CODIGOS_ESPECIALES.includes(s)) return 0;
+  const n = parseFloat(s.replace(',', '.'));
+  return isNaN(n) ? null : Math.min(5, Math.max(1, n));
+}
+
+function calcularPAC(notas, config) {
+  const valores = config.actividades.map(a => valorNumerico(notas[a.letra]));
+  const validos = valores.filter(v => v !== null);
+  if (validos.length === 0) return null;
+
+  if (config.modo === 'EQUITATIVO') {
+    return Math.round((validos.reduce((a, b) => a + b, 0) / validos.length) * 100) / 100;
+  } else {
+    // PORCENTAJES
+    let sumaPonderada = 0, sumaPorc = 0;
+    config.actividades.forEach((a, i) => {
+      const v = valores[i];
+      if (v !== null) {
+        sumaPonderada += v * (a.peso / 100);
+        sumaPorc += (a.peso / 100);
+      }
+    });
+    return sumaPorc > 0 ? Math.round((sumaPonderada / sumaPorc) * 100) / 100 : null;
+  }
+}
+
+function calcularAUTO(notas) {
+  const coe = valorNumerico(notas.coe);
+  const het = valorNumerico(notas.het);
+  const pau = valorNumerico(notas.pau);
+  const vals = [coe, het, pau].filter(v => v !== null);
+  if (vals.length === 0) return null;
+  return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100;
+}
+
+function calcularDEF(pac, auto) {
+  if (pac === null && auto === null) return null;
+  const p = pac ?? 0;
+  const a = auto ?? 0;
+  return Math.round((p * 0.9 + a * 0.1) * 100) / 100;
+}
+
+function estadoAprobacion(def) {
+  if (def === null) return '';
+  return def >= MIN_APROBATORIO ? 'APROBÓ' : 'NO APROBÓ';
+}
+
+function colorNota(v) {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'string' && CODIGOS_ESPECIALES.includes(v.toUpperCase())) return 'cod-esp';
+  const n = parseFloat(v);
+  if (isNaN(n)) return '';
+  if (n >= MIN_APROBATORIO) return 'nota-ok';
+  if (n >= 3.0) return 'nota-alerta';
+  return 'nota-mal';
+}
+
+// ── FIRESTORE HELPERS ──────────────────────────────────────────────────────
+async function guardarConfig(grupo, config) {
+  await setDoc(doc(db, `periodos/${PERIODO}/grupos/${grupo}/config`, 'setup'), config);
+}
+
+async function cargarConfig(grupo) {
+  const snap = await getDoc(doc(db, `periodos/${PERIODO}/grupos/${grupo}/config`, 'setup'));
+  return snap.exists() ? snap.data() : null;
+}
+
+async function guardarNotas(grupo, estudiante, notas) {
+  const id = estudiante.replace(/\s+/g, '_');
+  await setDoc(doc(db, `periodos/${PERIODO}/grupos/${grupo}/notas`, id), { estudiante, notas, actualizado: new Date().toISOString() });
+}
+
+async function cargarNotasGrupo(grupo) {
+  const col = collection(db, `periodos/${PERIODO}/grupos/${grupo}/notas`);
+  const snap = await getDocs(col);
+  const result = {};
+  snap.forEach(d => { const data = d.data(); result[data.estudiante] = data.notas || {}; });
+  return result;
+}
+
+// ── UI HELPERS ─────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const show = id => $(id).style.display = '';
+const hide = id => $(id).style.display = 'none';
+
+function toast(msg, tipo = 'ok') {
+  const t = document.createElement('div');
+  t.className = `toast toast-${tipo}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.classList.add('toast-show'), 10);
+  setTimeout(() => { t.classList.remove('toast-show'); setTimeout(() => t.remove(), 300); }, 2500);
+}
+
+function setLoading(txt) {
+  $('loading-text').textContent = txt;
+  show('loading-overlay');
+}
+function clearLoading() { hide('loading-overlay'); }
+
+// ── RENDER PRINCIPAL ───────────────────────────────────────────────────────
+function renderLogin() {
+  $('app').innerHTML = `
+    <div class="login-wrap">
+      <div class="login-card">
+        <div class="brand-mark">M·A</div>
+        <h1 class="login-title">Mirai Analyst</h1>
+        <p class="login-sub">Sistema de Notas — Período ${PERIODO}</p>
+        <p class="login-inst">Colegio Los Ángeles San Fernando<br>Fabián Moreno · Robótica</p>
+        <button class="btn-google" id="btn-login">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Ingresar con Google
+        </button>
+      </div>
+    </div>`;
+  $('btn-login').onclick = async () => {
+    try {
+      setLoading('Iniciando sesión...');
+      await signInWithPopup(auth, provider);
+    } catch(e) { clearLoading(); toast('Error al iniciar sesión', 'err'); }
+  };
+}
+
+function renderApp(user) {
+  $('app').innerHTML = `
+    <div class="layout">
+      <!-- SIDEBAR -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-brand">M·A</span>
+          <button class="sidebar-toggle" id="sidebar-close">✕</button>
+        </div>
+        <div class="sidebar-info">
+          <div class="sidebar-periodo">Período ${PERIODO}</div>
+          <div class="sidebar-user">${user.displayName || user.email}</div>
+        </div>
+        <nav class="sidebar-nav">
+          <div class="nav-section-label">PRIMARIA</div>
+          ${['1A','1B','2A','2B','3','4A','4B'].map(g => `
+            <button class="nav-grupo" data-grupo="${g}" id="nav-${g}">${g.replace('A',' A').replace('B',' B')}</button>
+          `).join('')}
+          <div class="nav-section-label">BACHILLERATO</div>
+          ${['5A','5B','6A','6B','7A','7B','8A','8B','9A','9B','10A','10B','11A','11B'].map(g => `
+            <button class="nav-grupo" data-grupo="${g}" id="nav-${g}">${g.replace('A',' A').replace('B',' B').replace('10',' 10').replace('11',' 11').trim()}</button>
+          `).join('')}
+        </nav>
+        <div class="sidebar-footer">
+          <button class="btn-signout" id="btn-signout">Cerrar sesión</button>
+        </div>
+      </aside>
+
+      <!-- MAIN -->
+      <main class="main" id="main-content">
+        <div class="topbar">
+          <button class="btn-menu" id="btn-menu">☰</button>
+          <span class="topbar-title" id="topbar-title">Selecciona un grupo</span>
+          <div class="topbar-actions" id="topbar-actions"></div>
+        </div>
+        <div id="panel-grupo" class="panel-grupo">
+          <div class="welcome-msg">
+            <div class="welcome-icon">📋</div>
+            <h2>Bienvenido, ${(user.displayName || '').split(' ')[0]}</h2>
+            <p>Selecciona un grupo en el panel izquierdo para registrar o consultar notas del Período ${PERIODO}.</p>
+            <div class="stats-row">
+              <div class="stat-box"><span class="stat-num">21</span><span class="stat-lbl">Grupos</span></div>
+              <div class="stat-box"><span class="stat-num">394</span><span class="stat-lbl">Estudiantes</span></div>
+              <div class="stat-box"><span class="stat-num">${PERIODO}</span><span class="stat-lbl">Período</span></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- MODAL CONFIGURACIÓN -->
+    <div class="modal-overlay" id="modal-config" style="display:none">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="modal-config-title">Configurar grupo</h3>
+          <button class="modal-close" id="modal-close-config">✕</button>
+        </div>
+        <div class="modal-body" id="modal-config-body"></div>
+      </div>
+    </div>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loading-overlay" style="display:none" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <div id="loading-text" class="loading-text">Cargando...</div>
+    </div>`;
+
+  // Eventos sidebar
+  document.querySelectorAll('.nav-grupo').forEach(btn => {
+    btn.onclick = () => abrirGrupo(btn.dataset.grupo);
+  });
+  $('btn-signout').onclick = () => signOut(auth);
+  $('btn-menu').onclick = () => $('sidebar').classList.toggle('open');
+  $('sidebar-close').onclick = () => $('sidebar').classList.remove('open');
+  $('modal-close-config').onclick = () => hide('modal-config');
+}
+
+async function abrirGrupo(grupo) {
+  currentGrupo = grupo;
+  $('sidebar').classList.remove('open');
+  document.querySelectorAll('.nav-grupo').forEach(b => b.classList.remove('active'));
+  $(`nav-${grupo}`)?.classList.add('active');
+
+  const nombreGrupo = grupo === '3' ? 'Tercero' :
+    grupo.replace('1A','Primero A').replace('1B','Primero B')
+        .replace('2A','Segundo A').replace('2B','Segundo B')
+        .replace('4A','Cuarto A').replace('4B','Cuarto B')
+        .replace('5A','Quinto A').replace('5B','Quinto B')
+        .replace('6A','Sexto A').replace('6B','Sexto B')
+        .replace('7A','Séptimo A').replace('7B','Séptimo B')
+        .replace('8A','Octavo A').replace('8B','Octavo B')
+        .replace('9A','Noveno A').replace('9B','Noveno B')
+        .replace('10A','Décimo A').replace('10B','Décimo B')
+        .replace('11A','Once A').replace('11B','Once B');
+
+  $('topbar-title').textContent = `${nombreGrupo} · Período ${PERIODO}`;
+
+  setLoading('Cargando grupo...');
+  try {
+    configGrupo = await cargarConfig(grupo);
+    const notas = await cargarNotasGrupo(grupo);
+    notasCache[grupo] = notas;
+    clearLoading();
+
+    if (!configGrupo) {
+      mostrarPanelConfigInicial(grupo, nombreGrupo);
+    } else {
+      renderPlanilla(grupo, nombreGrupo);
+    }
+  } catch(e) {
+    clearLoading();
+    toast('Error cargando datos', 'err');
+    console.error(e);
+  }
+}
+
+function mostrarPanelConfigInicial(grupo, nombreGrupo) {
+  $('topbar-actions').innerHTML = '';
+  $('panel-grupo').innerHTML = `
+    <div class="config-inicial">
+      <h2>Configurar <em>${nombreGrupo}</em></h2>
+      <p>Este grupo aún no tiene actividades configuradas para el Período ${PERIODO}.<br>Define el modo de calificación antes de ingresar notas.</p>
+      <button class="btn-primary" id="btn-abrir-config">⚙ Configurar actividades</button>
+    </div>`;
+  $('btn-abrir-config').onclick = () => mostrarModalConfig(grupo, nombreGrupo, null);
+}
+
+function mostrarModalConfig(grupo, nombreGrupo, configActual) {
+  const config = configActual || { modo: 'EQUITATIVO', actividades: [
+    {letra:'A', nombre:'Actividad A', peso:20},
+    {letra:'B', nombre:'Actividad B', peso:20},
+    {letra:'C', nombre:'Actividad C', peso:20},
+    {letra:'D', nombre:'Actividad D', peso:20},
+    {letra:'E', nombre:'Actividad E', peso:20},
+  ]};
+
+  $('modal-config-title').textContent = `Configurar ${nombreGrupo}`;
+  $('modal-config-body').innerHTML = `
+    <div class="config-form">
+      <div class="form-row">
+        <label class="form-label">Modo de calificación</label>
+        <div class="toggle-modo">
+          <button class="toggle-btn ${config.modo==='EQUITATIVO'?'active':''}" data-modo="EQUITATIVO">Equitativo</button>
+          <button class="toggle-btn ${config.modo==='PORCENTAJES'?'active':''}" data-modo="PORCENTAJES">Porcentajes</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Actividades del bloque cognitivo-procedimental (90%)</label>
+        <div id="lista-actividades">
+          ${config.actividades.map((a,i) => renderActividadRow(a, i, config.modo)).join('')}
+        </div>
+        <button class="btn-add-act" id="btn-add-act">+ Agregar actividad</button>
+      </div>
+      <div class="form-row hint-auto">
+        <strong>Autoevaluación (10%)</strong> — COE · HET · PAU se ingresan por separado en la planilla
+      </div>
+      <div id="suma-pesos-msg"></div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="btn-cancel-config">Cancelar</button>
+        <button class="btn-primary" id="btn-save-config">Guardar configuración</button>
+      </div>
+    </div>`;
+
+  show('modal-config');
+  actualizarSumaPesos();
+
+  // Toggle modo
+  document.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const modo = btn.dataset.modo;
+      document.querySelectorAll('.peso-input').forEach(inp => {
+        inp.parentElement.style.display = modo === 'PORCENTAJES' ? '' : 'none';
+      });
+      actualizarSumaPesos();
+    };
+  });
+
+  // Add actividad
+  $('btn-add-act').onclick = () => {
+    const lista = $('lista-actividades');
+    const idx = lista.children.length;
+    const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXY';
+    const letra = letras[idx] || String(idx+1);
+    const modo = document.querySelector('.toggle-btn.active')?.dataset.modo || 'EQUITATIVO';
+    const div = document.createElement('div');
+    div.innerHTML = renderActividadRow({letra, nombre:`Actividad ${letra}`, peso:10}, idx, modo);
+    lista.appendChild(div.firstElementChild);
+    actualizarSumaPesos();
+    attachActividadEvents();
+  };
+
+  attachActividadEvents();
+
+  $('btn-cancel-config').onclick = () => hide('modal-config');
+  $('btn-save-config').onclick = async () => {
+    const modo = document.querySelector('.toggle-btn.active')?.dataset.modo || 'EQUITATIVO';
+    const rows = document.querySelectorAll('.act-row');
+    const actividades = [];
+    rows.forEach(row => {
+      const letra = row.querySelector('.act-letra').value.trim().toUpperCase();
+      const nombre = row.querySelector('.act-nombre').value.trim();
+      const peso = parseFloat(row.querySelector('.peso-input').value) || 0;
+      if (letra && nombre) actividades.push({letra, nombre, peso});
+    });
+    if (actividades.length === 0) { toast('Agrega al menos una actividad', 'err'); return; }
+    if (modo === 'PORCENTAJES') {
+      const suma = actividades.reduce((s,a) => s + a.peso, 0);
+      if (Math.abs(suma - 100) > 0.1) { toast(`Los porcentajes deben sumar 100% (actual: ${suma.toFixed(1)}%)`, 'err'); return; }
+    }
+    const nuevaConfig = {modo, actividades};
+    setLoading('Guardando configuración...');
+    try {
+      await guardarConfig(grupo, nuevaConfig);
+      configGrupo = nuevaConfig;
+      clearLoading();
+      hide('modal-config');
+      toast('Configuración guardada ✓');
+      renderPlanilla(grupo, nombreGrupo);
+    } catch(e) { clearLoading(); toast('Error guardando', 'err'); }
+  };
+}
+
+function renderActividadRow(a, i, modo) {
+  return `<div class="act-row">
+    <input class="act-letra input-sm" value="${a.letra}" maxlength="3" placeholder="A">
+    <input class="act-nombre input-md" value="${a.nombre}" placeholder="Nombre de la actividad">
+    <div class="peso-wrap" style="${modo==='PORCENTAJES'?'':'display:none'}">
+      <input class="peso-input input-xs" type="number" value="${a.peso}" min="0" max="100" step="0.5"> <span class="pct-symbol">%</span>
+    </div>
+    <button class="btn-del-act" title="Eliminar">🗑</button>
+  </div>`;
+}
+
+function attachActividadEvents() {
+  document.querySelectorAll('.btn-del-act').forEach(btn => {
+    btn.onclick = () => { btn.closest('.act-row').remove(); actualizarSumaPesos(); };
+  });
+  document.querySelectorAll('.peso-input').forEach(inp => {
+    inp.oninput = actualizarSumaPesos;
+  });
+}
+
+function actualizarSumaPesos() {
+  const modo = document.querySelector('.toggle-btn.active')?.dataset.modo;
+  const msg = $('suma-pesos-msg');
+  if (!msg) return;
+  if (modo !== 'PORCENTAJES') { msg.textContent = ''; return; }
+  const suma = Array.from(document.querySelectorAll('.peso-input')).reduce((s,i) => s + (parseFloat(i.value)||0), 0);
+  const ok = Math.abs(suma - 100) < 0.1;
+  msg.className = `suma-pesos ${ok ? 'suma-ok' : 'suma-err'}`;
+  msg.textContent = `Suma de porcentajes: ${suma.toFixed(1)}% ${ok ? '✓' : '(debe ser 100%)'}`;
+}
+
+// ── RENDER PLANILLA ────────────────────────────────────────────────────────
+function renderPlanilla(grupo, nombreGrupo) {
+  const estudiantes = ESTUDIANTES[grupo] || [];
+  const notas = notasCache[grupo] || {};
+  const config = configGrupo;
+  const letrasActs = config.actividades.map(a => a.letra);
+
+  $('topbar-actions').innerHTML = `
+    <button class="btn-secondary btn-sm" id="btn-reconfig">⚙ Configuración</button>
+    <button class="btn-primary btn-sm" id="btn-guardar-todo">💾 Guardar todo</button>`;
+
+  $('btn-reconfig').onclick = () => mostrarModalConfig(grupo, nombreGrupo, configGrupo);
+
+  // Construir cabecera
+  let cabeceraActs = config.actividades.map(a =>
+    `<th class="th-act" title="${a.nombre}${config.modo==='PORCENTAJES'?' ('+a.peso+'%)':''}">${a.letra}${config.modo==='PORCENTAJES'?'<br><span class="th-pct">'+a.peso+'%</span>':''}</th>`
+  ).join('');
+
+  let filas = estudiantes.map((est, idx) => {
+    const n = notas[est] || {};
+    const pac = calcularPAC(n, config);
+    const auto = calcularAUTO(n);
+    const mtn = pac !== null ? Math.round(pac * 0.9 * 100)/100 : null;
+    const mta = auto !== null ? Math.round(auto * 0.1 * 100)/100 : null;
+    const def = calcularDEF(pac, auto);
+    const vdef = def !== null ? Math.round((def - MIN_APROBATORIO) * 100)/100 : null;
+    const estado = estadoAprobacion(def);
+
+    const celdas = config.actividades.map(a => {
+      const val = n[a.letra] ?? '';
+      return `<td class="td-nota"><input class="input-nota ${colorNota(val)}" data-est="${est}" data-campo="${a.letra}" value="${val}" maxlength="5" autocomplete="off"></td>`;
+    }).join('');
+
+    const celdasAuto = ['coe','het','pau'].map(campo => {
+      const val = n[campo] ?? '';
+      return `<td class="td-nota td-auto"><input class="input-nota input-auto ${colorNota(val)}" data-est="${est}" data-campo="${campo}" value="${val}" maxlength="5" autocomplete="off"></td>`;
+    }).join('');
+
+    return `<tr class="fila-est" id="fila-${idx}">
+      <td class="td-num">${idx+1}</td>
+      <td class="td-nombre">${est}</td>
+      ${celdas}
+      <td class="td-calc pac">${pac !== null ? pac : ''}</td>
+      ${celdasAuto}
+      <td class="td-calc auto">${auto !== null ? auto : ''}</td>
+      <td class="td-calc mtn">${mtn !== null ? mtn : ''}</td>
+      <td class="td-calc mta">${mta !== null ? mta : ''}</td>
+      <td class="td-calc def ${colorNota(def)}">${def !== null ? def : ''}</td>
+      <td class="td-calc vdef ${vdef !== null ? (vdef >= 0 ? 'nota-ok':'nota-mal') : ''}">${vdef !== null ? (vdef >= 0 ? '+' : '') + vdef : ''}</td>
+      <td class="td-estado ${estado === 'APROBÓ' ? 'aprobado' : estado === 'NO APROBÓ' ? 'reprobado' : ''}">${estado}</td>
+    </tr>`;
+  }).join('');
+
+  $('panel-grupo').innerHTML = `
+    <div class="planilla-wrap">
+      <div class="planilla-header">
+        <div class="planilla-info">
+          <div class="planilla-colegio">Colegio Los Ángeles San Fernando — Fundación Mercedes Herrera Mora de Tenorio</div>
+          <div class="planilla-meta">
+            <span><strong>Grupo:</strong> ${nombreGrupo}</span>
+            <span><strong>Asignatura:</strong> Robótica</span>
+            <span><strong>Docente:</strong> Fabián Moreno</span>
+            <span><strong>Período:</strong> ${PERIODO}</span>
+            <span class="badge-modo ${config.modo === 'EQUITATIVO' ? 'eq' : 'pct'}">${config.modo}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="resumen-grupo">
+        <div class="resumen-item">
+          <span class="res-val" id="res-total">${estudiantes.length}</span>
+          <span class="res-lbl">Estudiantes</span>
+        </div>
+        <div class="resumen-item">
+          <span class="res-val res-verde" id="res-aprob">–</span>
+          <span class="res-lbl">Aprobaron</span>
+        </div>
+        <div class="resumen-item">
+          <span class="res-val res-rojo" id="res-repro">–</span>
+          <span class="res-lbl">Reprobaron</span>
+        </div>
+        <div class="resumen-item">
+          <span class="res-val" id="res-prom">–</span>
+          <span class="res-lbl">Promedio</span>
+        </div>
+      </div>
+
+      <div class="tabla-scroll">
+        <table class="planilla-tabla" id="tabla-planilla">
+          <thead>
+            <tr>
+              <th class="th-fixed th-num">#</th>
+              <th class="th-fixed th-nombre">Estudiante</th>
+              ${cabeceraActs}
+              <th class="th-calc">PAC</th>
+              <th class="th-auto" title="Coevaluación">COE</th>
+              <th class="th-auto" title="Heteroevaluación">HET</th>
+              <th class="th-auto" title="Pautas de convivencia">PAU</th>
+              <th class="th-calc">AUTO</th>
+              <th class="th-calc">MTN<br><span class="th-sub">90%</span></th>
+              <th class="th-calc">MTA<br><span class="th-sub">10%</span></th>
+              <th class="th-calc th-def">DEF</th>
+              <th class="th-calc">VDEF</th>
+              <th class="th-calc th-estado">ESTADO</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-planilla">${filas}</tbody>
+        </table>
+      </div>
+
+      <div class="leyenda">
+        <span><strong>Códigos:</strong></span>
+        <span class="cod-esp-demo">NP</span> No presentó ·
+        <span class="cod-esp-demo">AUS</span> Ausente ·
+        <span class="cod-esp-demo">EXC</span> Excusa ·
+        <span class="cod-esp-demo">PLA</span> Plana ·
+        <span class="nota-ok-demo">≥3.8</span> Aprobado ·
+        <span class="nota-alerta-demo">3.0–3.7</span> Alerta ·
+        <span class="nota-mal-demo">&lt;3.0</span> Crítico
+      </div>
+    </div>`;
+
+  // Eventos inputs
+  document.querySelectorAll('.input-nota').forEach(inp => {
+    inp.addEventListener('input', e => onInputNota(e.target, grupo));
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === 'Tab') moverFoco(e.target, e.shiftKey);
+    });
+  });
+
+  $('btn-guardar-todo').onclick = () => guardarTodo(grupo, estudiantes, config);
+  actualizarResumen(grupo, estudiantes, config);
+}
+
+function onInputNota(inp, grupo) {
+  const est = inp.dataset.est;
+  const campo = inp.dataset.campo;
+  const val = inp.value.trim();
+
+  // Actualizar cache
+  if (!notasCache[grupo]) notasCache[grupo] = {};
+  if (!notasCache[grupo][est]) notasCache[grupo][est] = {};
+  notasCache[grupo][est][campo] = val;
+
+  // Color en tiempo real
+  inp.className = `input-nota ${colorNota(val)} ${inp.classList.contains('input-auto') ? 'input-auto' : ''}`;
+
+  // Recalcular fila
+  recalcularFila(est, grupo, configGrupo);
+  actualizarResumen(grupo, ESTUDIANTES[grupo], configGrupo);
+}
+
+function recalcularFila(est, grupo, config) {
+  const n = notasCache[grupo]?.[est] || {};
+  const idx = (ESTUDIANTES[grupo] || []).indexOf(est);
+  if (idx < 0) return;
+
+  const pac = calcularPAC(n, config);
+  const auto = calcularAUTO(n);
+  const mtn = pac !== null ? Math.round(pac * 0.9 * 100)/100 : null;
+  const mta = auto !== null ? Math.round(auto * 0.1 * 100)/100 : null;
+  const def = calcularDEF(pac, auto);
+  const vdef = def !== null ? Math.round((def - MIN_APROBATORIO) * 100)/100 : null;
+  const estado = estadoAprobacion(def);
+
+  const row = document.getElementById(`fila-${idx}`);
+  if (!row) return;
+  const celdas = row.querySelectorAll('td');
+  const actLen = config.actividades.length;
+  const base = 2 + actLen; // #, nombre, ...acts
+
+  const set = (td, val, cls = '') => { td.textContent = val ?? ''; td.className = `td-calc ${cls}`; };
+
+  set(celdas[base], pac !== null ? pac : '');          // PAC
+  set(celdas[base+4], auto !== null ? auto : '');       // AUTO
+  set(celdas[base+5], mtn !== null ? mtn : '');         // MTN
+  set(celdas[base+6], mta !== null ? mta : '');         // MTA
+
+  const defTd = celdas[base+7];
+  defTd.textContent = def !== null ? def : '';
+  defTd.className = `td-calc def ${colorNota(def)}`;
+
+  const vdefTd = celdas[base+8];
+  vdefTd.textContent = vdef !== null ? (vdef >= 0 ? '+' : '') + vdef : '';
+  vdefTd.className = `td-calc vdef ${vdef !== null ? (vdef >= 0 ? 'nota-ok':'nota-mal') : ''}`;
+
+  const estadoTd = celdas[base+9];
+  estadoTd.textContent = estado;
+  estadoTd.className = `td-estado ${estado === 'APROBÓ' ? 'aprobado' : estado === 'NO APROBÓ' ? 'reprobado' : ''}`;
+}
+
+function actualizarResumen(grupo, estudiantes, config) {
+  const notas = notasCache[grupo] || {};
+  let aprob = 0, repro = 0, sumDef = 0, conDef = 0;
+  estudiantes.forEach(est => {
+    const n = notas[est] || {};
+    const def = calcularDEF(calcularPAC(n, config), calcularAUTO(n));
+    if (def !== null) {
+      conDef++;
+      sumDef += def;
+      if (def >= MIN_APROBATORIO) aprob++;
+      else repro++;
+    }
+  });
+  const ra = $('res-aprob'); if(ra) ra.textContent = aprob;
+  const rr = $('res-repro'); if(rr) rr.textContent = repro;
+  const rp = $('res-prom'); if(rp) rp.textContent = conDef > 0 ? (sumDef/conDef).toFixed(2) : '–';
+}
+
+function moverFoco(inp, reversa) {
+  const inputs = Array.from(document.querySelectorAll('.input-nota'));
+  const i = inputs.indexOf(inp);
+  const next = inputs[reversa ? i-1 : i+1];
+  if (next) { next.focus(); next.select(); }
+}
+
+async function guardarTodo(grupo, estudiantes, config) {
+  setLoading('Guardando notas...');
+  try {
+    const notas = notasCache[grupo] || {};
+    const promises = estudiantes.map(est =>
+      guardarNotas(grupo, est, notas[est] || {})
+    );
+    await Promise.all(promises);
+    clearLoading();
+    toast(`${estudiantes.length} estudiantes guardados ✓`);
+  } catch(e) {
+    clearLoading();
+    toast('Error al guardar', 'err');
+    console.error(e);
+  }
+}
+
+// ── AUTH STATE ─────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, user => {
+  clearLoading();
+  if (user) {
+    if (user.email !== DOCENTE_AUTORIZADO) {
+      toast('Correo no autorizado para este sistema', 'err');
+      signOut(auth);
+      renderLogin();
+      return;
+    }
+    currentUser = user;
+    renderApp(user);
+  } else {
+    currentUser = null;
+    renderLogin();
+  }
+});
+</script>
+
+<style>
+/* ── RESET & BASE ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0f1117;
+  --bg2: #161920;
+  --bg3: #1e2230;
+  --sidebar-w: 200px;
+  --accent: #e8c547;
+  --accent2: #4fc3f7;
+  --red: #ef5350;
+  --green: #66bb6a;
+  --orange: #ffa726;
+  --text: #e8eaf0;
+  --text2: #9095a8;
+  --text3: #5a607a;
+  --border: #252a3a;
+  --border2: #2e3448;
+  --radius: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,.4);
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); overflow: hidden; }
+#app { height: 100%; }
+
+/* ── LOGIN ───────────────────────────────────────────────────────────────── */
+.login-wrap {
+  height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 30% 50%, #1a1f35 0%, #0f1117 70%);
+}
+.login-card {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 48px 40px; text-align: center;
+  width: 360px; box-shadow: var(--shadow);
+}
+.brand-mark {
+  font-family: 'Fraunces', serif; font-size: 28px; font-weight: 800;
+  color: var(--accent); letter-spacing: 4px; margin-bottom: 16px;
+}
+.login-title {
+  font-family: 'Fraunces', serif; font-size: 26px; font-weight: 600;
+  color: var(--text); margin-bottom: 4px;
+}
+.login-sub { color: var(--text2); margin-bottom: 20px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+.login-inst { color: var(--text2); font-size: 12px; line-height: 1.7; margin-bottom: 32px; border-top: 1px solid var(--border); padding-top: 20px; }
+.btn-google {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: #fff; color: #333; border: none; border-radius: 8px;
+  padding: 12px 24px; font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: all .2s; width: 100%; justify-content: center;
+}
+.btn-google:hover { background: #f0f0f0; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+
+/* ── LAYOUT ──────────────────────────────────────────────────────────────── */
+.layout { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── SIDEBAR ─────────────────────────────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-w); background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
+  transition: transform .25s ease;
+}
+.sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 14px 12px; border-bottom: 1px solid var(--border); }
+.sidebar-brand { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 800; color: var(--accent); letter-spacing: 3px; }
+.sidebar-toggle { display: none; background: none; border: none; color: var(--text2); cursor: pointer; font-size: 16px; }
+.sidebar-info { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.sidebar-periodo { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 4px; }
+.sidebar-user { font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 8px 6px; }
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.nav-section-label { font-size: 9px; letter-spacing: 2px; color: var(--text3); text-transform: uppercase; padding: 10px 8px 4px; }
+.nav-grupo {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  color: var(--text2); padding: 7px 10px; border-radius: 6px; cursor: pointer;
+  font-family: 'DM Mono', monospace; font-size: 12px; transition: all .15s;
+}
+.nav-grupo:hover { background: var(--bg3); color: var(--text); }
+.nav-grupo.active { background: var(--accent); color: #0f1117; font-weight: 500; }
+.sidebar-footer { padding: 12px; border-top: 1px solid var(--border); }
+.btn-signout { width: 100%; background: none; border: 1px solid var(--border2); color: var(--text2); padding: 7px; border-radius: 6px; cursor: pointer; font-size: 11px; font-family: 'DM Mono', monospace; transition: all .15s; }
+.btn-signout:hover { border-color: var(--red); color: var(--red); }
+
+/* ── MAIN ────────────────────────────────────────────────────────────────── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); min-height: 50px; }
+.btn-menu { display: none; background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; padding: 4px; }
+.topbar-title { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; color: var(--text); flex: 1; }
+.topbar-actions { display: flex; gap: 8px; }
+
+/* ── PANEL GRUPO ─────────────────────────────────────────────────────────── */
+.panel-grupo { flex: 1; overflow: auto; padding: 0; }
+
+/* ── WELCOME ─────────────────────────────────────────────────────────────── */
+.welcome-msg { max-width: 480px; margin: 60px auto; text-align: center; padding: 0 24px; }
+.welcome-icon { font-size: 48px; margin-bottom: 20px; }
+.welcome-msg h2 { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 600; margin-bottom: 12px; }
+.welcome-msg p { color: var(--text2); line-height: 1.7; margin-bottom: 32px; }
+.stats-row { display: flex; gap: 16px; justify-content: center; }
+.stat-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; text-align: center; }
+.stat-num { display: block; font-family: 'Fraunces', serif; font-size: 28px; font-weight: 800; color: var(--accent); }
+.stat-lbl { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; }
+
+/* ── CONFIG INICIAL ──────────────────────────────────────────────────────── */
+.config-inicial { max-width: 480px; margin: 60px auto; text-align: center; padding: 0 24px; }
+.config-inicial h2 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; margin-bottom: 12px; }
+.config-inicial h2 em { color: var(--accent); font-style: normal; }
+.config-inicial p { color: var(--text2); line-height: 1.7; margin-bottom: 32px; }
+
+/* ── PLANILLA ────────────────────────────────────────────────────────────── */
+.planilla-wrap { display: flex; flex-direction: column; height: 100%; }
+.planilla-header { padding: 14px 16px 10px; background: var(--bg2); border-bottom: 1px solid var(--border); }
+.planilla-colegio { font-size: 11px; color: var(--text2); margin-bottom: 6px; }
+.planilla-meta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; align-items: center; }
+.planilla-meta span { color: var(--text); }
+.badge-modo { padding: 2px 8px; border-radius: 4px; font-size: 10px; letter-spacing: 1px; font-weight: 500; }
+.badge-modo.eq { background: rgba(232,197,71,.15); color: var(--accent); border: 1px solid rgba(232,197,71,.3); }
+.badge-modo.pct { background: rgba(79,195,247,.15); color: var(--accent2); border: 1px solid rgba(79,195,247,.3); }
+
+.resumen-grupo { display: flex; gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+.resumen-item { flex: 1; background: var(--bg2); padding: 10px; text-align: center; }
+.res-val { display: block; font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; }
+.res-verde { color: var(--green); }
+.res-rojo { color: var(--red); }
+.res-lbl { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; }
+
+.tabla-scroll { flex: 1; overflow: auto; }
+.tabla-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.tabla-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+.planilla-tabla { border-collapse: collapse; min-width: 100%; font-size: 12px; }
+.planilla-tabla thead { position: sticky; top: 0; z-index: 10; }
+.planilla-tabla th { background: var(--bg3); color: var(--text2); font-weight: 500; padding: 8px 6px; border: 1px solid var(--border); text-align: center; white-space: nowrap; letter-spacing: .5px; font-size: 11px; }
+.th-fixed { position: sticky; background: var(--bg3); z-index: 11; }
+.th-num { left: 0; width: 36px; }
+.th-nombre { left: 36px; min-width: 200px; text-align: left; }
+.th-act { min-width: 52px; }
+.th-calc { min-width: 52px; background: rgba(30,34,48,.9) !important; }
+.th-auto { min-width: 48px; background: rgba(79,195,247,.08) !important; color: var(--accent2) !important; }
+.th-def { background: rgba(232,197,71,.08) !important; color: var(--accent) !important; }
+.th-estado { min-width: 80px; }
+.th-sub { font-size: 9px; font-weight: 400; color: var(--text3); }
+.th-pct { font-size: 9px; font-weight: 400; color: var(--text3); }
+
+.planilla-tabla tbody tr:hover td { background: rgba(255,255,255,.02); }
+.fila-est td { border: 1px solid var(--border); padding: 2px 3px; }
+.td-num { text-align: center; color: var(--text3); padding: 4px 6px !important; position: sticky; left: 0; background: var(--bg); z-index: 2; }
+.td-nombre { position: sticky; left: 36px; background: var(--bg); z-index: 2; padding: 4px 10px !important; white-space: nowrap; font-size: 11px; color: var(--text); }
+.fila-est:hover .td-num, .fila-est:hover .td-nombre { background: var(--bg3); }
+.td-nota { padding: 2px !important; }
+.td-auto { background: rgba(79,195,247,.04); }
+.td-calc { text-align: center; font-weight: 500; padding: 4px 6px !important; color: var(--text2); font-size: 11px; }
+.td-estado { text-align: center; font-size: 10px; letter-spacing: .5px; font-weight: 500; }
+.aprobado { color: var(--green); }
+.reprobado { color: var(--red); }
+
+.input-nota {
+  width: 100%; background: transparent; border: none; outline: none;
+  color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px;
+  text-align: center; padding: 4px 2px; transition: background .1s;
+}
+.input-nota:focus { background: rgba(232,197,71,.1); border-radius: 3px; }
+.input-auto { color: var(--accent2); }
+.nota-ok { color: var(--green) !important; }
+.nota-alerta { color: var(--orange) !important; }
+.nota-mal { color: var(--red) !important; }
+.cod-esp { color: var(--text2) !important; }
+
+.leyenda { padding: 10px 16px; background: var(--bg2); border-top: 1px solid var(--border); font-size: 11px; color: var(--text2); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.nota-ok-demo { color: var(--green); }
+.nota-alerta-demo { color: var(--orange); }
+.nota-mal-demo { color: var(--red); }
+.cod-esp-demo { background: var(--bg3); padding: 1px 5px; border-radius: 3px; }
+
+/* ── BOTONES ─────────────────────────────────────────────────────────────── */
+.btn-primary { background: var(--accent); color: #0f1117; border: none; border-radius: 7px; padding: 10px 18px; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; }
+.btn-primary:hover { background: #f0d060; transform: translateY(-1px); }
+.btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border2); border-radius: 7px; padding: 10px 18px; font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; transition: all .15s; }
+.btn-secondary:hover { border-color: var(--text2); }
+.btn-sm { padding: 6px 12px; font-size: 11px; }
+
+/* ── MODAL ───────────────────────────────────────────────────────────────── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 12px; width: 100%; max-width: 560px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.modal-header h3 { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; }
+.modal-close { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 18px; line-height: 1; }
+.modal-body { overflow-y: auto; padding: 20px; flex: 1; }
+
+.config-form { display: flex; flex-direction: column; gap: 20px; }
+.form-row { display: flex; flex-direction: column; gap: 8px; }
+.form-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); }
+
+.toggle-modo { display: flex; gap: 0; background: var(--bg3); border-radius: 8px; padding: 3px; }
+.toggle-btn { flex: 1; background: none; border: none; color: var(--text2); padding: 8px; border-radius: 6px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 12px; transition: all .15s; }
+.toggle-btn.active { background: var(--accent); color: #0f1117; font-weight: 500; }
+
+.act-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.input-sm { width: 44px; background: var(--bg3); border: 1px solid var(--border2); color: var(--text); padding: 6px 8px; border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 12px; text-align: center; text-transform: uppercase; }
+.input-md { flex: 1; background: var(--bg3); border: 1px solid var(--border2); color: var(--text); padding: 6px 10px; border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 12px; }
+.input-xs { width: 60px; background: var(--bg3); border: 1px solid var(--border2); color: var(--text); padding: 6px 8px; border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 12px; text-align: center; }
+.input-sm:focus, .input-md:focus, .input-xs:focus { outline: none; border-color: var(--accent); }
+.peso-wrap { display: flex; align-items: center; gap: 4px; }
+.pct-symbol { color: var(--text2); font-size: 11px; }
+.btn-del-act { background: none; border: none; cursor: pointer; font-size: 14px; opacity: .5; transition: opacity .15s; padding: 4px; }
+.btn-del-act:hover { opacity: 1; }
+.btn-add-act { background: none; border: 1px dashed var(--border2); color: var(--text2); padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: 'DM Mono', monospace; width: 100%; transition: all .15s; margin-top: 8px; }
+.btn-add-act:hover { border-color: var(--accent); color: var(--accent); }
+.hint-auto { background: rgba(79,195,247,.06); border: 1px solid rgba(79,195,247,.15); border-radius: 8px; padding: 10px 14px; font-size: 11px; color: var(--accent2); }
+.suma-pesos { font-size: 12px; padding: 6px 10px; border-radius: 6px; }
+.suma-ok { background: rgba(102,187,106,.1); color: var(--green); }
+.suma-err { background: rgba(239,83,80,.1); color: var(--red); }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; padding-top: 8px; }
+
+/* ── LOADING ─────────────────────────────────────────────────────────────── */
+.loading-overlay { position: fixed; inset: 0; background: rgba(15,17,23,.8); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+.loading-spinner { width: 36px; height: 36px; border: 3px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+.loading-text { color: var(--text2); font-size: 13px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── TOAST ───────────────────────────────────────────────────────────────── */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg3); border: 1px solid var(--border2); color: var(--text); padding: 12px 18px; border-radius: 8px; font-size: 13px; z-index: 300; transform: translateY(20px); opacity: 0; transition: all .25s; box-shadow: var(--shadow); }
+.toast-show { transform: translateY(0); opacity: 1; }
+.toast-err { border-color: var(--red); color: var(--red); }
+
+/* ── RESPONSIVE ──────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 50; transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,.5); }
+  .sidebar-toggle { display: block; }
+  .btn-menu { display: block; }
+  .th-nombre { min-width: 140px; }
+  .stats-row { flex-direction: column; align-items: center; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div id="loading-text" class="loading-text">Iniciando sistema...</div>
+  </div>
+</div>
+</body>
+</html>
