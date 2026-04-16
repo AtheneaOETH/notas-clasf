@@ -7,16 +7,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;0,800;1,300&display=swap" rel="stylesheet">
 
-<!-- Firebase SDK -->
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged }
-  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, orderBy }
-  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+<!-- Firebase SDK COMPAT -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
+<script>
 // ── CONFIGURACIÓN FIREBASE ─────────────────────────────────────────────────
-// Reemplaza con tu configuración real de Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyCER29CHCa7bjJv86RSzVcqWzWsXiFa_Rc",
   authDomain: "clasfnotas-ea47c.firebaseapp.com",
@@ -29,10 +26,11 @@ const firebaseConfig = {
 const DOCENTE_AUTORIZADO = "morenofabian.documentosclasf@gmail.com";
 const PERIODO = 4;
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+const provider = new firebase.auth.GoogleAuthProvider();
 provider.setCustomParameters({ login_hint: DOCENTE_AUTORIZADO });
 
 // ── BASE DE DATOS DE ESTUDIANTES ───────────────────────────────────────────
@@ -112,22 +110,21 @@ function colorNota(v) {
 
 // ── FIRESTORE HELPERS ──────────────────────────────────────────────────────
 async function guardarConfig(grupo, config) {
-  await setDoc(doc(db, `periodos/${PERIODO}/grupos/${grupo}/config`, 'setup'), config);
+  await db.doc(`periodos/${PERIODO}/grupos/${grupo}/config/setup`).set(config);
 }
 
 async function cargarConfig(grupo) {
-  const snap = await getDoc(doc(db, `periodos/${PERIODO}/grupos/${grupo}/config`, 'setup'));
-  return snap.exists() ? snap.data() : null;
+  const snap = await db.doc(`periodos/${PERIODO}/grupos/${grupo}/config/setup`).get();
+  return snap.exists ? snap.data() : null;
 }
 
 async function guardarNotas(grupo, estudiante, notas) {
   const id = estudiante.replace(/\s+/g, '_');
-  await setDoc(doc(db, `periodos/${PERIODO}/grupos/${grupo}/notas`, id), { estudiante, notas, actualizado: new Date().toISOString() });
+  await db.doc(`periodos/${PERIODO}/grupos/${grupo}/notas/${id}`).set({ estudiante, notas, actualizado: new Date().toISOString() });
 }
 
 async function cargarNotasGrupo(grupo) {
-  const col = collection(db, `periodos/${PERIODO}/grupos/${grupo}/notas`);
-  const snap = await getDocs(col);
+  const snap = await db.collection(`periodos/${PERIODO}/grupos/${grupo}/notas`).get();
   const result = {};
   snap.forEach(d => { const data = d.data(); result[data.estudiante] = data.notas || {}; });
   return result;
@@ -135,12 +132,10 @@ async function cargarNotasGrupo(grupo) {
 
 // ── UI HELPERS ─────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-
 const show = id => {
   const el = $(id);
   if (el) el.style.display = '';
 };
-
 const hide = id => {
   const el = $(id);
   if (el) el.style.display = 'none';
@@ -160,7 +155,6 @@ function setLoading(txt = 'Cargando...') {
   if (textEl) textEl.textContent = txt;
   show('loading-overlay');
 }
-
 function clearLoading() {
   hide('loading-overlay');
 }
@@ -183,7 +177,7 @@ function renderLogin() {
   $('btn-login').onclick = async () => {
     try {
       setLoading('Iniciando sesión...');
-      await signInWithPopup(auth, provider);
+      await auth.signInWithPopup(provider);
     } catch(e) { clearLoading(); toast('Error al iniciar sesión', 'err'); }
   };
 }
@@ -248,14 +242,13 @@ function renderApp(user) {
         <div class="modal-body" id="modal-config-body"></div>
       </div>
     </div>
-
-    `;
+`;
 
   // Eventos sidebar
   document.querySelectorAll('.nav-grupo').forEach(btn => {
     btn.onclick = () => abrirGrupo(btn.dataset.grupo);
   });
-  $('btn-signout').onclick = () => signOut(auth);
+  $('btn-signout').onclick = () => auth.signOut();
   $('btn-menu').onclick = () => $('sidebar').classList.toggle('open');
   $('sidebar-close').onclick = () => $('sidebar').classList.remove('open');
   $('modal-close-config').onclick = () => hide('modal-config');
@@ -673,12 +666,12 @@ async function guardarTodo(grupo, estudiantes, config) {
 }
 
 // ── AUTH STATE ─────────────────────────────────────────────────────────────
-onAuthStateChanged(auth, user => {
+auth.onAuthStateChanged(user => {
   clearLoading();
   if (user) {
     if (user.email !== DOCENTE_AUTORIZADO) {
       toast('Correo no autorizado para este sistema', 'err');
-      signOut(auth);
+      auth.signOut();
       renderLogin();
       return;
     }
