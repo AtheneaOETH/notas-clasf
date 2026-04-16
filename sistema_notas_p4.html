@@ -25,6 +25,7 @@ const firebaseConfig = {
   messagingSenderId: "526878281411",
   appId: "1:526878281411:web:5bae22090d1be100739c76"
 };
+};
 
 const DOCENTE_AUTORIZADO = "morenofabian.documentosclasf@gmail.com";
 const PERIODO = 4;
@@ -148,10 +149,15 @@ function toast(msg, tipo = 'ok') {
 }
 
 function setLoading(txt) {
-  $('loading-text').textContent = txt;
-  show('loading-overlay');
+  const el = $('loading-overlay');
+  const tel = $('loading-text');
+  if (tel) tel.textContent = txt;
+  if (el) el.style.display = '';
 }
-function clearLoading() { hide('loading-overlay'); }
+function clearLoading() {
+  const el = $('loading-overlay');
+  if (el) el.style.display = 'none';
+}
 
 // ── RENDER PRINCIPAL ───────────────────────────────────────────────────────
 function renderLogin() {
@@ -929,3 +935,4 @@ html, body { height: 100%; background: var(--bg); color: var(--text); overflow: 
 </div>
 </body>
 </html>
+
