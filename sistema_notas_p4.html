@@ -49,6 +49,7 @@ const USUARIOS = {
     "nombre": "Fabián Moreno",
     "rol": "docente",
     "estado": "confirmado",
+    "modulos": ["coordinacion"],
     "materias": {
       "Robótica": ["1A", "1B", "2A", "2B", "3", "4A", "4B", "5A", "5B", "6A", "6B", "7A", "7B", "8A", "8B", "9A", "9B", "10A", "10B", "11A", "11B"]
     }
@@ -206,8 +207,10 @@ let currentUser = null;
 let currentPerfil = null;
 let currentGrupo = null;
 let currentMateria = null;
+let currentVista = 'planillas';
 let configGrupo = null; // {modo, actividades:[{letra, nombre, peso}]}
 let notasCache = {}; // materiaId::grupo -> {estudiante -> notas}
+let corteProgramadoTimeout = null;
 
 function normalizarMateriaId(nombre) {
   return String(nombre || '')
@@ -407,6 +410,546 @@ function clearLoading() {
   if (el) el.style.display = 'none';
 }
 
+function limpiarTimeoutCorteProgramado() {
+  if (corteProgramadoTimeout) {
+    clearTimeout(corteProgramadoTimeout);
+    corteProgramadoTimeout = null;
+  }
+}
+
+function puedeUsarCoordinacion(perfil = currentPerfil) {
+  if (!perfil) return false;
+  return perfil.rol === 'coordinador' || (Array.isArray(perfil.modulos) && perfil.modulos.includes('coordinacion'));
+}
+
+function cambiarVista(vista) {
+  currentVista = vista;
+  if (vista === 'coordinacion') {
+    currentGrupo = null;
+    configGrupo = null;
+  }
+  renderApp(currentUser);
+}
+
+function fechaInputAISO(valor) {
+  if (!valor) return null;
+  return new Date(valor).toISOString();
+}
+
+function formatearFechaBogota(valor, incluirSegundos = false) {
+  if (!valor) return '—';
+  const d = new Date(valor);
+  if (Number.isNaN(d.getTime())) return '—';
+  const opts = {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  };
+  if (incluirSegundos) opts.second = '2-digit';
+  return new Intl.DateTimeFormat('es-CO', opts).format(d);
+}
+
+function fechaISOAInput(valor) {
+  if (!valor) return '';
+  const d = new Date(valor);
+  if (Number.isNaN(d.getTime())) return '';
+  const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return z.toISOString().slice(0, 16);
+}
+
+function slugId(valor) {
+  return String(valor || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase();
+}
+
+function contarNotasReportadas(notas, config) {
+  if (!config || !Array.isArray(config.actividades)) return 0;
+  return config.actividades.reduce((acc, act) => {
+    const v = notas?.[act.letra];
+    return (v !== null && v !== undefined && String(v).trim() !== '') ? acc + 1 : acc;
+  }, 0);
+}
+
+function notaReferenciaReporte(notas, config) {
+  const pac = calcularPAC(notas, config);
+  const auto = calcularAUTO(notas);
+  if (pac === null && auto === null) return null;
+  if (pac !== null && auto === null) return pac;
+  return calcularDEF(pac, auto);
+}
+
+function colorEstadoReporte(estado) {
+  if (estado === 'perdiendo') return 'estado-perdiendo';
+  if (estado === 'sin_informacion') return 'estado-sininfo';
+  return 'estado-ok';
+}
+
+function etiquetaEstadoReporte(estado) {
+  if (estado === 'perdiendo') return 'Perdiendo';
+  if (estado === 'sin_informacion') return 'Sin información';
+  return 'Al día';
+}
+
+function catalogoDocenteMateriaGrupo() {
+  const catalogo = {};
+  Object.entries(USUARIOS).forEach(([correo, perfil]) => {
+    if ((perfil.estado && perfil.estado !== 'confirmado') || perfil.rol !== 'docente') return;
+    Object.entries(perfil.materias || {}).forEach(([materia, grupos]) => {
+      (grupos || []).forEach(grupo => {
+        const key = `${normalizarMateriaId(materia)}::${grupo}`;
+        if (!catalogo[key]) {
+          catalogo[key] = { materia, grupo, docentes: [], correos: [] };
+        }
+        if (!catalogo[key].docentes.includes(perfil.nombre)) catalogo[key].docentes.push(perfil.nombre);
+        if (!catalogo[key].correos.includes(correo)) catalogo[key].correos.push(correo);
+      });
+    });
+  });
+  return Object.values(catalogo).sort((a, b) => {
+    const g = GRUPOS_ORDEN.indexOf(a.grupo) - GRUPOS_ORDEN.indexOf(b.grupo);
+    return g !== 0 ? g : a.materia.localeCompare(b.materia, 'es');
+  });
+}
+
+async function guardarProgramacionMitadPeriodo(data) {
+  await db.collection(`periodos/${PERIODO}/coordinacion_config`).doc('mitad_periodo').set(data, { merge: true });
+}
+
+async function cargarProgramacionMitadPeriodo() {
+  const snap = await db.collection(`periodos/${PERIODO}/coordinacion_config`).doc('mitad_periodo').get();
+  return snap.exists ? snap.data() : null;
+}
+
+async function obtenerUltimoCorteMitadPeriodo() {
+  const snap = await db.collection(`periodos/${PERIODO}/coordinacion_cortes`).orderBy('generadoEn', 'desc').limit(1).get();
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
+  return { id: doc.id, ...doc.data() };
+}
+
+async function cargarDetalleCorteMitadPeriodo(corteId) {
+  const [estSnap, docSnap] = await Promise.all([
+    db.collection(`periodos/${PERIODO}/coordinacion_cortes`).doc(corteId).collection('estudiantes').orderBy('grupo').orderBy('nombre').get(),
+    db.collection(`periodos/${PERIODO}/coordinacion_cortes`).doc(corteId).collection('docentes').orderBy('docente').orderBy('materia').orderBy('grupo').get()
+  ]);
+  return {
+    estudiantes: estSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+    docentes: docSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+  };
+}
+
+async function guardarSubcoleccionPorLotes(baseRef, nombre, items, getId) {
+  let batch = db.batch();
+  let count = 0;
+  for (const item of items) {
+    const ref = baseRef.collection(nombre).doc(getId(item));
+    batch.set(ref, item);
+    count++;
+    if (count === 400) {
+      await batch.commit();
+      batch = db.batch();
+      count = 0;
+    }
+  }
+  if (count > 0) await batch.commit();
+}
+
+async function generarCorteMitadPeriodo({ corteOficialISO, creadoPor, modo = 'oficial' }) {
+  const catalogo = catalogoDocenteMateriaGrupo();
+  const estudiantesMap = {};
+  const filasDocentes = [];
+
+  for (const item of catalogo) {
+    const { materia, grupo, docentes, correos } = item;
+    const [config, notas] = await Promise.all([
+      cargarConfig(grupo, materia),
+      cargarNotasGrupo(grupo, materia)
+    ]);
+
+    const estudiantesGrupo = ESTUDIANTES[grupo] || [];
+    const resumenGrupoMateria = {
+      totalEstudiantes: estudiantesGrupo.length,
+      conInformacion: 0,
+      sinInformacion: 0,
+      perdiendo: 0
+    };
+
+    estudiantesGrupo.forEach(estudiante => {
+      const notasEst = notas[estudiante] || {};
+      const cantidadNotas = contarNotasReportadas(notasEst, config);
+      const tieneInfo = cantidadNotas >= 2;
+      const notaRef = tieneInfo ? notaReferenciaReporte(notasEst, config) : null;
+      const estado = !tieneInfo
+        ? 'sin_informacion'
+        : (notaRef !== null && notaRef < MIN_APROBATORIO ? 'perdiendo' : 'ok');
+
+      if (estado === 'sin_informacion') resumenGrupoMateria.sinInformacion++;
+      if (estado === 'perdiendo') resumenGrupoMateria.perdiendo++;
+      if (tieneInfo) resumenGrupoMateria.conInformacion++;
+
+      const key = `${grupo}::${estudiante}`;
+      if (!estudiantesMap[key]) {
+        estudiantesMap[key] = {
+          nombre: estudiante,
+          grupo,
+          grupoNombre: nombreGrupo(grupo),
+          materias: []
+        };
+      }
+
+      estudiantesMap[key].materias.push({
+        materia,
+        nota: notaRef !== null ? Number(notaRef.toFixed(2)) : null,
+        estado,
+        cantidadNotas,
+        docentes
+      });
+    });
+
+    docentes.forEach((docente, idx) => {
+      filasDocentes.push({
+        docente,
+        correo: correos[idx] || correos[0] || '',
+        materia,
+        grupo,
+        grupoNombre: nombreGrupo(grupo),
+        totalEstudiantes: resumenGrupoMateria.totalEstudiantes,
+        conInformacion: resumenGrupoMateria.conInformacion,
+        sinInformacion: resumenGrupoMateria.sinInformacion,
+        perdiendo: resumenGrupoMateria.perdiendo,
+        cumplimientoPct: resumenGrupoMateria.totalEstudiantes
+          ? Number(((resumenGrupoMateria.conInformacion / resumenGrupoMateria.totalEstudiantes) * 100).toFixed(1))
+          : 0
+      });
+    });
+  }
+
+  const filasEstudiantes = Object.values(estudiantesMap).map(item => {
+    const perdiendo = item.materias.filter(m => m.estado === 'perdiendo');
+    const sinInfo = item.materias.filter(m => m.estado === 'sin_informacion');
+    return {
+      nombre: item.nombre,
+      grupo: item.grupo,
+      grupoNombre: item.grupoNombre,
+      perdiendoCount: perdiendo.length,
+      sinInfoCount: sinInfo.length,
+      materias: item.materias.sort((a, b) => a.materia.localeCompare(b.materia, 'es'))
+    };
+  }).filter(item => item.perdiendoCount > 0 || item.sinInfoCount > 0)
+    .sort((a, b) => {
+      const g = GRUPOS_ORDEN.indexOf(a.grupo) - GRUPOS_ORDEN.indexOf(b.grupo);
+      return g !== 0 ? g : a.nombre.localeCompare(b.nombre, 'es');
+    });
+
+  const resumen = {
+    totalEstudiantesAlertados: filasEstudiantes.length,
+    totalFilasDocentes: filasDocentes.length,
+    totalAsignaturasSinInformacion: filasEstudiantes.reduce((acc, i) => acc + i.sinInfoCount, 0),
+    totalAsignaturasPerdiendo: filasEstudiantes.reduce((acc, i) => acc + i.perdiendoCount, 0)
+  };
+
+  const corteId = `corte_${new Date().toISOString().replace(/[:.]/g, '-')}`;
+  const ref = db.collection(`periodos/${PERIODO}/coordinacion_cortes`).doc(corteId);
+  const metadata = {
+    tipo: 'mitad_periodo',
+    modo,
+    corteOficialISO,
+    timezone: 'America/Bogota',
+    generadoEn: new Date().toISOString(),
+    generadoPor: creadoPor,
+    resumen
+  };
+
+  await ref.set(metadata);
+  await guardarSubcoleccionPorLotes(ref, 'estudiantes', filasEstudiantes, item => slugId(`${item.grupo}_${item.nombre}`));
+  await guardarSubcoleccionPorLotes(ref, 'docentes', filasDocentes, item => slugId(`${item.docente}_${item.materia}_${item.grupo}`));
+  return { id: corteId, ...metadata, detalle: { estudiantes: filasEstudiantes, docentes: filasDocentes } };
+}
+
+function programarGeneracionAutomatica(config) {
+  limpiarTimeoutCorteProgramado();
+  if (!config?.corteOficialISO || !puedeUsarCoordinacion()) return;
+  const objetivo = new Date(config.corteOficialISO).getTime();
+  const ahora = Date.now();
+  const ms = objetivo - ahora;
+  if (ms <= 0) return;
+  corteProgramadoTimeout = setTimeout(async () => {
+    try {
+      const ultimo = await obtenerUltimoCorteMitadPeriodo();
+      if (ultimo && ultimo.corteOficialISO === config.corteOficialISO) return;
+      await generarCorteMitadPeriodo({
+        corteOficialISO: config.corteOficialISO,
+        creadoPor: nombreDocenteActual(),
+        modo: 'oficial'
+      });
+      if (currentVista === 'coordinacion') {
+        await renderCoordinationPanel(true);
+      }
+      toast('Se generó el corte programado de mitad de periodo ✓');
+    } catch (e) {
+      console.error(e);
+      toast('No se pudo generar el corte programado', 'err');
+    }
+  }, ms);
+}
+
+function renderResumenCorte(corte, detalle) {
+  const estudiantes = detalle?.estudiantes || [];
+  const docentes = detalle?.docentes || [];
+
+  const estudiantesHtml = estudiantes.length ? estudiantes.map(item => `
+    <tr>
+      <td>${item.nombre}</td>
+      <td>${item.grupo}</td>
+      <td><span class="badge-pill badge-red">${item.perdiendoCount}</span></td>
+      <td><span class="badge-pill badge-amber">${item.sinInfoCount}</span></td>
+      <td>
+        <div class="materias-stack">
+          ${item.materias.map(m => `
+            <div class="materia-chip ${colorEstadoReporte(m.estado)}">
+              <strong>${m.materia}</strong> · ${m.estado === 'sin_informacion' ? 'Sin información' : m.nota}
+            </div>
+          `).join('')}
+        </div>
+      </td>
+    </tr>
+  `).join('') : `<tr><td colspan="5" class="td-empty">No hay estudiantes con alertas en este corte.</td></tr>`;
+
+  const docentesHtml = docentes.length ? docentes.map(item => `
+    <tr>
+      <td>${item.docente}</td>
+      <td>${item.materia}</td>
+      <td>${item.grupo}</td>
+      <td>${item.conInformacion}/${item.totalEstudiantes}</td>
+      <td>${item.sinInformacion}</td>
+      <td>${item.perdiendo}</td>
+      <td>${item.cumplimientoPct}%</td>
+    </tr>
+  `).join('') : `<tr><td colspan="7" class="td-empty">No hay datos de seguimiento docente.</td></tr>`;
+
+  return `
+    <div class="coord-section">
+      <div class="coord-section-head">
+        <h3>Último corte generado</h3>
+        <div class="coord-meta-inline">
+          <span><strong>Corte oficial:</strong> ${formatearFechaBogota(corte.corteOficialISO)}</span>
+          <span><strong>Generado:</strong> ${formatearFechaBogota(corte.generadoEn)}</span>
+          <span><strong>Por:</strong> ${corte.generadoPor || '—'}</span>
+        </div>
+      </div>
+
+      <div class="coord-summary-grid">
+        <div class="coord-summary-card">
+          <span class="coord-summary-num">${corte.resumen?.totalEstudiantesAlertados ?? 0}</span>
+          <span class="coord-summary-lbl">Estudiantes con alerta</span>
+        </div>
+        <div class="coord-summary-card">
+          <span class="coord-summary-num coord-red">${corte.resumen?.totalAsignaturasPerdiendo ?? 0}</span>
+          <span class="coord-summary-lbl">Asignaturas perdiendo</span>
+        </div>
+        <div class="coord-summary-card">
+          <span class="coord-summary-num coord-amber">${corte.resumen?.totalAsignaturasSinInformacion ?? 0}</span>
+          <span class="coord-summary-lbl">Asignaturas sin información</span>
+        </div>
+      </div>
+
+      <div class="coord-subsection">
+        <h4>Seguimiento de estudiantes</h4>
+        <div class="tabla-scroll">
+          <table class="coord-table">
+            <thead>
+              <tr>
+                <th>Estudiante</th>
+                <th>Grupo</th>
+                <th>Perdiendo</th>
+                <th>Sin información</th>
+                <th>Detalle por asignatura</th>
+              </tr>
+            </thead>
+            <tbody>${estudiantesHtml}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="coord-subsection">
+        <h4>Seguimiento docente</h4>
+        <div class="tabla-scroll">
+          <table class="coord-table">
+            <thead>
+              <tr>
+                <th>Docente</th>
+                <th>Asignatura</th>
+                <th>Grupo</th>
+                <th>Con información</th>
+                <th>Sin información</th>
+                <th>Estudiantes perdiendo</th>
+                <th>Cumplimiento</th>
+              </tr>
+            </thead>
+            <tbody>${docentesHtml}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function renderCoordinationPanel(forzarRefresco = false) {
+  if (!puedeUsarCoordinacion()) {
+    $('panel-grupo').innerHTML = `<div class="coord-empty">No tienes permisos para el módulo de coordinación académica.</div>`;
+    return;
+  }
+
+  $('topbar-title').textContent = 'Coordinación académica · Reporte de mitad de periodo';
+  $('topbar-actions').innerHTML = `<button class="btn-secondary btn-sm" id="btn-volver-planillas">📚 Volver a planillas</button>`;
+  $('btn-volver-planillas').onclick = () => cambiarVista('planillas');
+
+  if (!forzarRefresco) setLoading('Cargando coordinación académica...');
+  try {
+    const [config, ultimo] = await Promise.all([
+      cargarProgramacionMitadPeriodo(),
+      obtenerUltimoCorteMitadPeriodo()
+    ]);
+    const detalle = ultimo ? await cargarDetalleCorteMitadPeriodo(ultimo.id) : null;
+    clearLoading();
+
+    const ahora = Date.now();
+    const corteMs = config?.corteOficialISO ? new Date(config.corteOficialISO).getTime() : null;
+    const yaVencio = corteMs ? corteMs <= ahora : false;
+    const yaGenerado = !!(ultimo && config?.corteOficialISO && ultimo.corteOficialISO === config.corteOficialISO);
+    const estadoProgramacion = !config?.corteOficialISO
+      ? 'Sin programar'
+      : yaGenerado
+        ? 'Generado'
+        : yaVencio
+          ? 'Pendiente por generar'
+          : 'Programado';
+
+    $('panel-grupo').innerHTML = `
+      <div class="coord-wrap">
+        <div class="coord-hero">
+          <div>
+            <h2>Reporte de mitad de periodo</h2>
+            <p>Programa un corte oficial para coordinación académica. El sistema separa estudiantes <strong>perdiendo</strong> y asignaturas <strong>sin información</strong> cuando hay menos de 2 notas reportadas.</p>
+          </div>
+          <div class="coord-status ${yaGenerado ? 'ok' : yaVencio ? 'warn' : 'idle'}">
+            <span class="coord-status-label">Estado</span>
+            <strong>${estadoProgramacion}</strong>
+          </div>
+        </div>
+
+        <div class="coord-grid">
+          <div class="coord-card">
+            <h3>Programación del corte</h3>
+            <label class="coord-label">Fecha y hora oficial del corte (Bogotá)</label>
+            <input type="datetime-local" id="coord-corte-input" class="coord-input" value="${fechaISOAInput(config?.corteOficialISO)}">
+            <div class="coord-actions">
+              <button class="btn-primary btn-sm" id="btn-guardar-programacion">Guardar programación</button>
+              <button class="btn-secondary btn-sm" id="btn-generar-corte">Generar corte ahora</button>
+            </div>
+            <div class="coord-note">
+              <strong>Nota alpha:</strong> si dejas esta pantalla abierta, el sistema puede generar el corte automáticamente a la hora programada. Si el navegador está cerrado, quedará como <em>pendiente por generar</em>.
+            </div>
+          </div>
+
+          <div class="coord-card">
+            <h3>Resumen de programación</h3>
+            <div class="coord-kv"><span>Corte oficial</span><strong>${formatearFechaBogota(config?.corteOficialISO)}</strong></div>
+            <div class="coord-kv"><span>Zona horaria</span><strong>America/Bogota</strong></div>
+            <div class="coord-kv"><span>Último corte generado</span><strong>${ultimo ? formatearFechaBogota(ultimo.generadoEn) : '—'}</strong></div>
+            <div class="coord-kv"><span>Último generado por</span><strong>${ultimo?.generadoPor || '—'}</strong></div>
+          </div>
+        </div>
+
+        ${ultimo ? renderResumenCorte(ultimo, detalle) : `
+          <div class="coord-empty">
+            Aún no hay cortes generados. Programa una fecha y hora oficial para el reporte de mitad de periodo.
+          </div>
+        `}
+      </div>
+    `;
+
+    $('btn-guardar-programacion').onclick = async () => {
+      const valor = $('coord-corte-input').value;
+      if (!valor) {
+        toast('Selecciona fecha y hora del corte', 'err');
+        return;
+      }
+      setLoading('Guardando programación...');
+      try {
+        const payload = {
+          corteOficialISO: fechaInputAISO(valor),
+          timezone: 'America/Bogota',
+          actualizadoPor: nombreDocenteActual(),
+          actualizadoEn: new Date().toISOString()
+        };
+        await guardarProgramacionMitadPeriodo(payload);
+        clearLoading();
+        programarGeneracionAutomatica(payload);
+        toast('Programación guardada ✓');
+        await renderCoordinationPanel(true);
+      } catch (e) {
+        console.error(e);
+        clearLoading();
+        toast('No se pudo guardar la programación', 'err');
+      }
+    };
+
+    $('btn-generar-corte').onclick = async () => {
+      const valor = $('coord-corte-input').value;
+      const corteOficialISO = valor ? fechaInputAISO(valor) : (config?.corteOficialISO || new Date().toISOString());
+      setLoading('Generando corte de mitad de periodo...');
+      try {
+        const resultado = await generarCorteMitadPeriodo({
+          corteOficialISO,
+          creadoPor: nombreDocenteActual(),
+          modo: 'manual'
+        });
+        clearLoading();
+        toast('Corte generado ✓');
+        await renderCoordinationPanel(true);
+      } catch (e) {
+        console.error(e);
+        clearLoading();
+        toast('No se pudo generar el corte', 'err');
+      }
+    };
+
+    programarGeneracionAutomatica(config);
+  } catch (e) {
+    console.error(e);
+    clearLoading();
+    $('panel-grupo').innerHTML = `<div class="coord-empty">No se pudo cargar el módulo de coordinación académica.</div>`;
+  }
+}
+
+function renderWelcomePanel(user, materias, gruposMateria) {
+  $('topbar-title').textContent = `Selecciona un grupo · ${currentMateria || 'Sin asignatura'}`;
+  $('topbar-actions').innerHTML = '';
+  $('panel-grupo').innerHTML = `
+    <div class="welcome-msg welcome-msg-pro">
+      <div class="welcome-brand">
+        <img src="${LOGO_MIRAI}" alt="Mirai Academic" class="welcome-mirai-logo">
+      </div>
+      <h2>Bienvenido, ${(currentPerfil?.nombre || user.displayName || '').split(' ')[0]}</h2>
+      <p>Estás trabajando en <strong>${currentMateria || 'sin asignatura seleccionada'}</strong>. Selecciona un grupo en el panel izquierdo para registrar o consultar notas del Período ${PERIODO}.</p>
+      <div class="stats-row">
+        <div class="stat-box"><span class="stat-num">${materias.length}</span><span class="stat-lbl">Asignaturas</span></div>
+        <div class="stat-box"><span class="stat-num">${gruposMateria.length}</span><span class="stat-lbl">Grupos visibles</span></div>
+        <div class="stat-box"><span class="stat-num">${PERIODO}</span><span class="stat-lbl">Período</span></div>
+      </div>
+    </div>
+  `;
+}
+
 // ── RENDER PRINCIPAL ───────────────────────────────────────────────────────
 function renderLogin() {
   $('app').innerHTML = `
@@ -452,6 +995,7 @@ function renderApp(user) {
   const gruposMateria = gruposPermitidosPorMateria(currentMateria);
   const gruposPrimaria = gruposMateria.filter(g => ['1A','1B','2A','2B','3','4A','4B','5A','5B'].includes(g));
   const gruposBachillerato = gruposMateria.filter(g => ['6A','6B','7A','7B','8A','8B','9A','9B','10A','10B','11A','11B'].includes(g));
+  const tieneModuloCoordinacion = puedeUsarCoordinacion();
 
   $('app').innerHTML = `
     <div class="layout">
@@ -476,14 +1020,19 @@ function renderApp(user) {
           </div>
         </div>
 
-        <div class="sidebar-subjects">
+        <div class="sidebar-modules">
+          <button class="module-btn ${currentVista === 'planillas' ? 'active' : ''}" id="btn-module-planillas">📚 Planillas</button>
+          ${tieneModuloCoordinacion ? `<button class="module-btn ${currentVista === 'coordinacion' ? 'active' : ''}" id="btn-module-coordinacion">🗂 Coordinación</button>` : ''}
+        </div>
+
+        <div class="sidebar-subjects ${currentVista === 'coordinacion' ? 'is-hidden' : ''}">
           <div class="nav-section-label">ASIGNATURAS</div>
           <div class="subject-list">
             ${materias.map(m => `<button class="nav-materia ${m===currentMateria?'active':''}" data-materia="${m}">${m}</button>`).join('')}
           </div>
         </div>
 
-        <nav class="sidebar-nav">
+        <nav class="sidebar-nav ${currentVista === 'coordinacion' ? 'is-hidden' : ''}">
           <div class="nav-section-label">PRIMARIA</div>
           ${gruposPrimaria.map(renderNavGrupoButton).join('') || '<div class="nav-empty">Sin grupos en primaria</div>'}
           <div class="nav-section-label">BACHILLERATO</div>
@@ -498,23 +1047,10 @@ function renderApp(user) {
       <main class="main" id="main-content">
         <div class="topbar topbar-pro">
           <button class="btn-menu" id="btn-menu">☰</button>
-          <span class="topbar-title" id="topbar-title">Selecciona un grupo · ${currentMateria || 'Sin asignatura'}</span>
+          <span class="topbar-title" id="topbar-title"></span>
           <div class="topbar-actions" id="topbar-actions"></div>
         </div>
-        <div id="panel-grupo" class="panel-grupo">
-          <div class="welcome-msg welcome-msg-pro">
-            <div class="welcome-brand">
-              <img src="${LOGO_MIRAI}" alt="Mirai Academic" class="welcome-mirai-logo">
-            </div>
-            <h2>Bienvenido, ${(currentPerfil?.nombre || user.displayName || '').split(' ')[0]}</h2>
-            <p>Estás trabajando en <strong>${currentMateria || 'sin asignatura seleccionada'}</strong>. Selecciona un grupo en el panel izquierdo para registrar o consultar notas del Período ${PERIODO}.</p>
-            <div class="stats-row">
-              <div class="stat-box"><span class="stat-num">${materias.length}</span><span class="stat-lbl">Asignaturas</span></div>
-              <div class="stat-box"><span class="stat-num">${gruposMateria.length}</span><span class="stat-lbl">Grupos visibles</span></div>
-              <div class="stat-box"><span class="stat-num">${PERIODO}</span><span class="stat-lbl">Período</span></div>
-            </div>
-          </div>
-        </div>
+        <div id="panel-grupo" class="panel-grupo"></div>
       </main>
     </div>
 
@@ -539,6 +1075,15 @@ function renderApp(user) {
   $('btn-menu').onclick = () => $('sidebar').classList.toggle('open');
   $('sidebar-close').onclick = () => $('sidebar').classList.remove('open');
   $('modal-close-config').onclick = () => hide('modal-config');
+  $('btn-module-planillas').onclick = () => cambiarVista('planillas');
+  if ($('btn-module-coordinacion')) $('btn-module-coordinacion').onclick = () => cambiarVista('coordinacion');
+
+  if (currentVista === 'coordinacion' && tieneModuloCoordinacion) {
+    renderCoordinationPanel();
+  } else {
+    currentVista = 'planillas';
+    renderWelcomePanel(user, materias, gruposMateria);
+  }
 }
 
 async function abrirGrupo(grupo) {
@@ -1037,13 +1582,16 @@ auth.onAuthStateChanged(user => {
 
     currentUser = user;
     currentPerfil = perfil;
+    currentVista = 'planillas';
     asegurarMateriaActual();
     renderApp(user);
   } else {
+    limpiarTimeoutCorteProgramado();
     currentUser = null;
     currentPerfil = null;
     currentGrupo = null;
     currentMateria = null;
+    currentVista = 'planillas';
     renderLogin();
   }
 });
@@ -1517,6 +2065,269 @@ html, body { height: 100%; background: var(--bg); color: var(--text); overflow: 
   .login-title { font-size: 28px; }
   .sidebar-school-logo { width: 48px; height: 48px; }
   .planilla-logo-colegio { width: 50px; height: 50px; }
+}
+
+
+/* ── COORDINACIÓN ACADÉMICA ───────────────────────────────────────────── */
+.sidebar-modules {
+  padding: 0 12px 12px;
+  display: grid;
+  gap: 8px;
+}
+.module-btn {
+  width: 100%;
+  background: var(--bg3);
+  color: var(--text2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  transition: all .15s;
+}
+.module-btn:hover { color: var(--text); border-color: var(--text3); }
+.module-btn.active { background: rgba(232,197,71,.12); color: var(--accent); border-color: rgba(232,197,71,.35); }
+.is-hidden { display: none !important; }
+
+.coord-wrap {
+  padding: 20px;
+  display: grid;
+  gap: 18px;
+}
+.coord-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid var(--soft-line);
+  border-radius: 18px;
+  background: rgba(255,255,255,.02);
+}
+.coord-hero h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+.coord-hero p {
+  color: var(--text2);
+  line-height: 1.6;
+  max-width: 760px;
+}
+.coord-status {
+  min-width: 180px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--soft-line);
+  background: var(--bg2);
+}
+.coord-status.ok { border-color: rgba(102,187,106,.35); background: rgba(102,187,106,.08); }
+.coord-status.warn { border-color: rgba(255,167,38,.35); background: rgba(255,167,38,.08); }
+.coord-status.idle { border-color: var(--soft-line); }
+.coord-status-label {
+  display: block;
+  color: var(--text2);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 6px;
+}
+.coord-grid {
+  display: grid;
+  grid-template-columns: 1.2fr .8fr;
+  gap: 18px;
+}
+.coord-card {
+  padding: 18px;
+  border: 1px solid var(--soft-line);
+  border-radius: 18px;
+  background: rgba(255,255,255,.02);
+}
+.coord-card h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  margin-bottom: 14px;
+}
+.coord-label {
+  display: block;
+  color: var(--text2);
+  margin-bottom: 8px;
+}
+.coord-input {
+  width: 100%;
+  background: var(--bg3);
+  color: var(--text);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: 'DM Mono', monospace;
+  margin-bottom: 12px;
+}
+.coord-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.coord-note {
+  margin-top: 12px;
+  color: var(--text2);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.coord-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--soft-line);
+}
+.coord-kv:last-child { border-bottom: none; }
+.coord-kv span { color: var(--text2); }
+.coord-kv strong { color: var(--text); text-align: right; }
+.coord-section, .coord-subsection {
+  padding: 18px;
+  border: 1px solid var(--soft-line);
+  border-radius: 18px;
+  background: rgba(255,255,255,.02);
+}
+.coord-section-head {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.coord-section-head h3, .coord-subsection h4 {
+  font-family: 'Fraunces', serif;
+  font-size: 19px;
+}
+.coord-subsection h4 { margin-bottom: 12px; }
+.coord-meta-inline {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: var(--text2);
+  font-size: 12px;
+}
+.coord-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.coord-summary-card {
+  padding: 14px;
+  border: 1px solid var(--soft-line);
+  border-radius: 14px;
+  background: var(--bg2);
+}
+.coord-summary-num {
+  display: block;
+  font-family: 'Fraunces', serif;
+  font-size: 28px;
+  color: var(--accent);
+}
+.coord-summary-num.coord-red { color: var(--red); }
+.coord-summary-num.coord-amber { color: var(--orange); }
+.coord-summary-lbl {
+  display: block;
+  margin-top: 4px;
+  color: var(--text2);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.coord-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 880px;
+}
+.coord-table th,
+.coord-table td {
+  border: 1px solid var(--border);
+  padding: 10px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.coord-table th {
+  background: var(--bg3);
+  color: var(--text2);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+}
+.coord-table td {
+  font-size: 12px;
+}
+.td-empty {
+  text-align: center !important;
+  color: var(--text2);
+}
+.materias-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.materia-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  border: 1px solid var(--soft-line);
+  background: var(--bg2);
+  font-size: 11px;
+}
+.estado-perdiendo {
+  border-color: rgba(239,83,80,.35);
+  color: #ffd3d2;
+  background: rgba(239,83,80,.12);
+}
+.estado-sininfo {
+  border-color: rgba(255,167,38,.35);
+  color: #ffe2b7;
+  background: rgba(255,167,38,.12);
+}
+.estado-ok {
+  border-color: rgba(102,187,106,.35);
+  color: #d7f3d8;
+  background: rgba(102,187,106,.12);
+}
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-weight: 600;
+}
+.badge-red {
+  background: rgba(239,83,80,.16);
+  color: #ffd0cf;
+}
+.badge-amber {
+  background: rgba(255,167,38,.16);
+  color: #ffe1b3;
+}
+.coord-empty {
+  margin: 20px;
+  padding: 22px;
+  border-radius: 18px;
+  border: 1px dashed var(--border2);
+  color: var(--text2);
+  text-align: center;
+  line-height: 1.6;
+}
+@media (max-width: 980px) {
+  .coord-grid,
+  .coord-summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .coord-hero {
+    flex-direction: column;
+  }
 }
 
 </style>
