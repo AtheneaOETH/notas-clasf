@@ -734,6 +734,63 @@ function programarGeneracionAutomatica(config) {
   }, ms);
 }
 
+
+function obtenerMetricasDashboardCoordinacion() {
+  const totalEstudiantes = Object.values(ESTUDIANTES).reduce((acc, lista) => acc + (Array.isArray(lista) ? lista.length : 0), 0);
+  const materiasActivas = new Set();
+  const docentesOperativos = new Set();
+  const gruposOperativos = new Set();
+
+  Object.entries(USUARIOS).forEach(([correo, perfil]) => {
+    if (!perfil || perfil.rol !== 'docente' || perfil.estado !== 'confirmado') return;
+    const materias = perfil.materias || {};
+    const nombresMaterias = Object.keys(materias).filter(nombre => Array.isArray(materias[nombre]) && materias[nombre].length > 0);
+    if (!nombresMaterias.length) return;
+
+    docentesOperativos.add(correo);
+    nombresMaterias.forEach(nombre => {
+      materiasActivas.add(nombre);
+      (materias[nombre] || []).forEach(grupo => gruposOperativos.add(grupo));
+    });
+  });
+
+  return {
+    totalEstudiantes,
+    totalAsignaturasActivas: materiasActivas.size,
+    totalDocentesOperativos: docentesOperativos.size,
+    totalGruposOperativos: gruposOperativos.size
+  };
+}
+
+function renderDashboardCoordinacion(metricas) {
+  return `
+    <div class="coord-section coord-dashboard-section">
+      <div class="coord-section-head">
+        <h3>Dashboard general de la plataforma</h3>
+        <div class="coord-meta-inline">
+          <span><strong>Grupos operativos:</strong> ${metricas.totalGruposOperativos}</span>
+          <span><strong>Período:</strong> ${PERIODO}</span>
+        </div>
+      </div>
+
+      <div class="coord-summary-grid">
+        <div class="coord-summary-card">
+          <span class="coord-summary-num">${metricas.totalEstudiantes}</span>
+          <span class="coord-summary-lbl">Estudiantes en plataforma</span>
+        </div>
+        <div class="coord-summary-card">
+          <span class="coord-summary-num">${metricas.totalAsignaturasActivas}</span>
+          <span class="coord-summary-lbl">Asignaturas operativas</span>
+        </div>
+        <div class="coord-summary-card">
+          <span class="coord-summary-num">${metricas.totalDocentesOperativos}</span>
+          <span class="coord-summary-lbl">Docentes operativos</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderResumenCorte(corte, detalle) {
   const estudiantes = detalle?.estudiantes || [];
   const docentes = detalle?.docentes || [];
@@ -852,6 +909,7 @@ async function renderCoordinationPanel(forzarRefresco = false) {
       obtenerUltimoCorteMitadPeriodo()
     ]);
     const detalle = ultimo ? await cargarDetalleCorteMitadPeriodo(ultimo.id) : null;
+    const metricasDashboard = obtenerMetricasDashboardCoordinacion();
     clearLoading();
 
     const ahora = Date.now();
@@ -878,6 +936,8 @@ async function renderCoordinationPanel(forzarRefresco = false) {
             <strong>${estadoProgramacion}</strong>
           </div>
         </div>
+
+        ${renderDashboardCoordinacion(metricasDashboard)}
 
         <div class="coord-grid">
           <div class="coord-card">
