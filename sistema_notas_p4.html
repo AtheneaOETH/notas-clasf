@@ -211,6 +211,7 @@ let currentVista = 'planillas';
 let configGrupo = null; // {modo, actividades:[{letra, nombre, peso}]}
 let notasCache = {}; // materiaId::grupo -> {estudiante -> notas}
 let corteProgramadoTimeout = null;
+let currentCoordinacionConfig = null;
 
 function normalizarMateriaId(nombre) {
   return String(nombre || '')
@@ -526,6 +527,38 @@ async function guardarProgramacionMitadPeriodo(data) {
 async function cargarProgramacionMitadPeriodo() {
   const snap = await db.collection(`periodos/${PERIODO}/coordinacion_config`).doc('mitad_periodo').get();
   return snap.exists ? snap.data() : null;
+}
+
+function construirAvisoCorteDocente() {
+  const config = currentCoordinacionConfig;
+  if (!config?.corteOficialISO || currentVista !== 'planillas') return '';
+
+  const objetivo = new Date(config.corteOficialISO);
+  if (Number.isNaN(objetivo.getTime())) return '';
+
+  const ahora = new Date();
+  const diffMs = objetivo.getTime() - ahora.getTime();
+  const diffDias = Math.ceil(diffMs / 86400000);
+
+  let claseUrgencia = 'is-normal';
+  let etiquetaTiempo = 'Próximo corte de coordinación';
+
+  if (diffMs < 0) {
+    claseUrgencia = 'is-past';
+    etiquetaTiempo = 'Último corte programado';
+  } else if (diffDias <= 1) {
+    claseUrgencia = 'is-soon';
+    etiquetaTiempo = 'Corte de coordinación próximo';
+  }
+
+  return `
+    <div class="docente-corte-banner ${claseUrgencia}">
+      <div class="docente-corte-banner-icon">📅</div>
+      <div class="docente-corte-banner-copy">
+        <div class="docente-corte-banner-title">${etiquetaTiempo}: <strong>${formatearFechaBogota(config.corteOficialISO)}</strong></div>
+        <div class="docente-corte-banner-sub">Las asignaturas con menos de 2 notas aparecerán como <strong>Sin información</strong> en el reporte de Coordinación.</div>
+      </div>
+    </div>`;
 }
 
 async function obtenerUltimoCorteMitadPeriodo() {
@@ -1104,6 +1137,7 @@ async function abrirGrupo(grupo) {
   try {
     configGrupo = await cargarConfig(grupo, currentMateria);
     const notas = await cargarNotasGrupo(grupo, currentMateria);
+    currentCoordinacionConfig = await cargarProgramacionMitadPeriodo();
     notasCache[cacheKey(grupo, currentMateria)] = notas;
     clearLoading();
 
@@ -1274,6 +1308,8 @@ function renderPlanilla(grupo, nombreGrupo) {
     `<th class="th-act" title="${a.nombre}${config.modo==='PORCENTAJES'?' ('+a.peso+'%)':''}">${a.letra}${config.modo==='PORCENTAJES'?'<br><span class="th-pct">'+a.peso+'%</span>':''}</th>`
   ).join('');
 
+  const avisoCorteDocente = construirAvisoCorteDocente();
+
   let filas = estudiantes.map((est, idx) => {
     const n = notas[est] || {};
     const autoCalc = calcularAUTO(n);
@@ -1333,6 +1369,8 @@ function renderPlanilla(grupo, nombreGrupo) {
           <span class="badge-modo ${config.modo === 'EQUITATIVO' ? 'eq' : 'pct'}">${config.modo}</span>
         </div>
       </div>
+
+      ${avisoCorteDocente}
 
       <div class="resumen-grupo">
         <div class="resumen-item">
@@ -1727,6 +1765,43 @@ html, body { height: 100%; background: var(--bg); color: var(--text); overflow: 
 
 /* ── PLANILLA ────────────────────────────────────────────────────────────── */
 .planilla-wrap { display: flex; flex-direction: column; height: 100%; }
+.docente-corte-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 14px 16px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(79,195,247,.07);
+}
+.docente-corte-banner.is-soon {
+  background: rgba(232,197,71,.10);
+  border-color: rgba(232,197,71,.25);
+}
+.docente-corte-banner.is-past {
+  background: rgba(255,255,255,.04);
+  border-color: rgba(255,255,255,.08);
+}
+.docente-corte-banner-icon {
+  font-size: 18px;
+  line-height: 1;
+  transform: translateY(1px);
+}
+.docente-corte-banner-copy {
+  min-width: 0;
+}
+.docente-corte-banner-title {
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.docente-corte-banner-sub {
+  color: var(--text2);
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 2px;
+}
 .planilla-header { padding: 14px 16px 10px; background: var(--bg2); border-bottom: 1px solid var(--border); }
 .planilla-colegio { font-size: 11px; color: var(--text2); margin-bottom: 6px; }
 .planilla-meta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; align-items: center; }
