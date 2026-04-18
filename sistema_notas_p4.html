@@ -1202,10 +1202,9 @@ async function abrirGrupo(grupo) {
     clearLoading();
 
     if (!configGrupo) {
-      mostrarPanelConfigInicial(grupo, grupoBonito);
-    } else {
-      renderPlanilla(grupo, grupoBonito);
+      configGrupo = {modo: 'EQUITATIVO', actividades: []};
     }
+    renderPlanilla(grupo, grupoBonito);
   } catch(e) {
     clearLoading();
     toast('Error cargando datos', 'err');
@@ -1474,6 +1473,15 @@ function renderPlanilla(grupo, nombreGrupo) {
         </table>
       </div>
 
+      <div class="barra-actividades">
+        <button class="btn-add-actividad" id="btn-add-act-planilla">＋ Nueva actividad</button>
+        <div class="modo-selector">
+          <span class="modo-label">Modo:</span>
+          <button class="toggle-modo-btn ${config.modo==='EQUITATIVO'?'tmb-active':''}" id="btn-modo-eq" data-modo="EQUITATIVO">Equitativo</button>
+          <button class="toggle-modo-btn ${config.modo==='PORCENTAJES'?'tmb-active':''}" id="btn-modo-pct" data-modo="PORCENTAJES">Porcentajes</button>
+        </div>
+      </div>
+
       <div class="leyenda">
         <span><strong>Códigos:</strong></span>
         <span class="cod-esp-demo">NP</span> No presentó ·
@@ -1494,6 +1502,30 @@ function renderPlanilla(grupo, nombreGrupo) {
   });
 
   $('btn-guardar-todo').onclick = () => guardarTodo(grupo, estudiantes, config);
+
+  // Botón nueva actividad
+  const btnAdd = $('btn-add-act-planilla');
+  if (btnAdd) {
+    btnAdd.onclick = () => agregarActividad(grupo, nombreGrupo);
+  }
+
+  // Botones modo
+  document.querySelectorAll('.toggle-modo-btn').forEach(btn => {
+    btn.onclick = async () => {
+      configGrupo.modo = btn.dataset.modo;
+      setLoading('Guardando modo...');
+      try {
+        await guardarConfig(grupo, currentMateria, configGrupo);
+        clearLoading();
+        toast(`Modo cambiado a ${configGrupo.modo} ✓`);
+        renderPlanilla(grupo, nombreGrupo);
+      } catch(e) {
+        clearLoading();
+        toast('Error guardando modo', 'err');
+      }
+    };
+  });
+
   actualizarResumen(grupo, estudiantes, config);
 }
 
@@ -1628,7 +1660,7 @@ function agregarActividad(grupo, nombreGrupo) {
     configGrupo.actividades.push({letra, nombre, peso});
     setLoading('Guardando actividad...');
     try {
-      await guardarConfig(grupo, configGrupo);
+      await guardarConfig(grupo, currentMateria, configGrupo);
       clearLoading();
       cerrar();
       toast(`Actividad ${letra} — "${nombre}" agregada ✓`);
