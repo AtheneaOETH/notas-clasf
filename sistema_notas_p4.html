@@ -734,63 +734,6 @@ function programarGeneracionAutomatica(config) {
   }, ms);
 }
 
-
-function obtenerMetricasDashboardCoordinacion() {
-  const totalEstudiantes = Object.values(ESTUDIANTES).reduce((acc, lista) => acc + (Array.isArray(lista) ? lista.length : 0), 0);
-  const materiasActivas = new Set();
-  const docentesOperativos = new Set();
-  const gruposOperativos = new Set();
-
-  Object.entries(USUARIOS).forEach(([correo, perfil]) => {
-    if (!perfil || perfil.rol !== 'docente' || perfil.estado !== 'confirmado') return;
-    const materias = perfil.materias || {};
-    const nombresMaterias = Object.keys(materias).filter(nombre => Array.isArray(materias[nombre]) && materias[nombre].length > 0);
-    if (!nombresMaterias.length) return;
-
-    docentesOperativos.add(correo);
-    nombresMaterias.forEach(nombre => {
-      materiasActivas.add(nombre);
-      (materias[nombre] || []).forEach(grupo => gruposOperativos.add(grupo));
-    });
-  });
-
-  return {
-    totalEstudiantes,
-    totalAsignaturasActivas: materiasActivas.size,
-    totalDocentesOperativos: docentesOperativos.size,
-    totalGruposOperativos: gruposOperativos.size
-  };
-}
-
-function renderDashboardCoordinacion(metricas) {
-  return `
-    <div class="coord-section coord-dashboard-section">
-      <div class="coord-section-head">
-        <h3>Dashboard general de la plataforma</h3>
-        <div class="coord-meta-inline">
-          <span><strong>Grupos operativos:</strong> ${metricas.totalGruposOperativos}</span>
-          <span><strong>Período:</strong> ${PERIODO}</span>
-        </div>
-      </div>
-
-      <div class="coord-summary-grid">
-        <div class="coord-summary-card">
-          <span class="coord-summary-num">${metricas.totalEstudiantes}</span>
-          <span class="coord-summary-lbl">Estudiantes en plataforma</span>
-        </div>
-        <div class="coord-summary-card">
-          <span class="coord-summary-num">${metricas.totalAsignaturasActivas}</span>
-          <span class="coord-summary-lbl">Asignaturas operativas</span>
-        </div>
-        <div class="coord-summary-card">
-          <span class="coord-summary-num">${metricas.totalDocentesOperativos}</span>
-          <span class="coord-summary-lbl">Docentes operativos</span>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
 function renderResumenCorte(corte, detalle) {
   const estudiantes = detalle?.estudiantes || [];
   const docentes = detalle?.docentes || [];
@@ -909,7 +852,6 @@ async function renderCoordinationPanel(forzarRefresco = false) {
       obtenerUltimoCorteMitadPeriodo()
     ]);
     const detalle = ultimo ? await cargarDetalleCorteMitadPeriodo(ultimo.id) : null;
-    const metricasDashboard = obtenerMetricasDashboardCoordinacion();
     clearLoading();
 
     const ahora = Date.now();
@@ -936,8 +878,6 @@ async function renderCoordinationPanel(forzarRefresco = false) {
             <strong>${estadoProgramacion}</strong>
           </div>
         </div>
-
-        ${renderDashboardCoordinacion(metricasDashboard)}
 
         <div class="coord-grid">
           <div class="coord-card">
@@ -1202,9 +1142,10 @@ async function abrirGrupo(grupo) {
     clearLoading();
 
     if (!configGrupo) {
-      configGrupo = {modo: 'EQUITATIVO', actividades: []};
+      mostrarPanelConfigInicial(grupo, grupoBonito);
+    } else {
+      renderPlanilla(grupo, grupoBonito);
     }
-    renderPlanilla(grupo, grupoBonito);
   } catch(e) {
     clearLoading();
     toast('Error cargando datos', 'err');
@@ -1473,15 +1414,6 @@ function renderPlanilla(grupo, nombreGrupo) {
         </table>
       </div>
 
-      <div class="barra-actividades">
-        <button class="btn-add-actividad" id="btn-add-act-planilla">＋ Nueva actividad</button>
-        <div class="modo-selector">
-          <span class="modo-label">Modo:</span>
-          <button class="toggle-modo-btn ${config.modo==='EQUITATIVO'?'tmb-active':''}" id="btn-modo-eq" data-modo="EQUITATIVO">Equitativo</button>
-          <button class="toggle-modo-btn ${config.modo==='PORCENTAJES'?'tmb-active':''}" id="btn-modo-pct" data-modo="PORCENTAJES">Porcentajes</button>
-        </div>
-      </div>
-
       <div class="leyenda">
         <span><strong>Códigos:</strong></span>
         <span class="cod-esp-demo">NP</span> No presentó ·
@@ -1502,30 +1434,6 @@ function renderPlanilla(grupo, nombreGrupo) {
   });
 
   $('btn-guardar-todo').onclick = () => guardarTodo(grupo, estudiantes, config);
-
-  // Botón nueva actividad
-  const btnAdd = $('btn-add-act-planilla');
-  if (btnAdd) {
-    btnAdd.onclick = () => agregarActividad(grupo, nombreGrupo);
-  }
-
-  // Botones modo
-  document.querySelectorAll('.toggle-modo-btn').forEach(btn => {
-    btn.onclick = async () => {
-      configGrupo.modo = btn.dataset.modo;
-      setLoading('Guardando modo...');
-      try {
-        await guardarConfig(grupo, currentMateria, configGrupo);
-        clearLoading();
-        toast(`Modo cambiado a ${configGrupo.modo} ✓`);
-        renderPlanilla(grupo, nombreGrupo);
-      } catch(e) {
-        clearLoading();
-        toast('Error guardando modo', 'err');
-      }
-    };
-  });
-
   actualizarResumen(grupo, estudiantes, config);
 }
 
@@ -1660,7 +1568,7 @@ function agregarActividad(grupo, nombreGrupo) {
     configGrupo.actividades.push({letra, nombre, peso});
     setLoading('Guardando actividad...');
     try {
-      await guardarConfig(grupo, currentMateria, configGrupo);
+      await guardarConfig(grupo, configGrupo);
       clearLoading();
       cerrar();
       toast(`Actividad ${letra} — "${nombre}" agregada ✓`);
