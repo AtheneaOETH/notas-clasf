@@ -24,16 +24,7 @@ const firebaseConfig = {
   appId: "1:526878281411:web:5bae22090d1be100739c76"
 };
 
-const USUARIOS = {
-  "morenofabian.documentosclasf@gmail.com": {
-    rol: "docente",
-    estado: "confirmado"
-  },
-  "academico.clasf@gmail.com": {
-    rol: "visor_global",
-    estado: "confirmado"
-  }
-};
+const DOCENTE_AUTORIZADO = "morenofabian.documentosclasf@gmail.com";
 const PERIODO = 4;
 
 firebase.initializeApp(firebaseConfig);
@@ -58,9 +49,33 @@ const USUARIOS = {
     "nombre": "Fabián Moreno",
     "rol": "docente",
     "estado": "confirmado",
-    "modulos": ["coordinacion"],
+    "modulos": [
+      "coordinacion"
+    ],
     "materias": {
-      "Robótica": ["1A", "1B", "2A", "2B", "3", "4A", "4B", "5A", "5B", "6A", "6B", "7A", "7B", "8A", "8B", "9A", "9B", "10A", "10B", "11A", "11B"]
+      "Robótica": [
+        "1A",
+        "1B",
+        "2A",
+        "2B",
+        "3",
+        "4A",
+        "4B",
+        "5A",
+        "5B",
+        "6A",
+        "6B",
+        "7A",
+        "7B",
+        "8A",
+        "8B",
+        "9A",
+        "9B",
+        "10A",
+        "10B",
+        "11A",
+        "11B"
+      ]
     }
   },
   "naggy9427@gmail.com": {
@@ -68,7 +83,12 @@ const USUARIOS = {
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Matemáticas": ["9A", "9B", "10A", "10B"]
+      "Matemáticas": [
+        "9A",
+        "9B",
+        "10A",
+        "10B"
+      ]
     }
   },
   "mepeca03@gmail.com": {
@@ -76,55 +96,139 @@ const USUARIOS = {
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Speaking Club": ["6A", "6B", "7A", "7B", "8A", "8B", "9A", "9B", "10A", "10B", "11A", "11B"]
-    }
+      "Speaking Club": [
+        "6A",
+        "6B",
+        "7A",
+        "7B",
+        "8A",
+        "8B",
+        "9A",
+        "9B",
+        "10A",
+        "10B",
+        "11A",
+        "11B"
+      ]
+    },
+    "directorGrupo": "8B",
+    "modulos": [
+      "directores"
+    ]
   },
   "docentekarenortiz@gmail.com": {
     "nombre": "Karen Ortiz Bolivar",
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Quimica": ["7B", "8A", "8B", "9A", "9B", "10A", "10B", "11A", "11B"]
-    }
+      "Quimica": [
+        "7B",
+        "8A",
+        "8B",
+        "9A",
+        "9B",
+        "10A",
+        "10B",
+        "11A",
+        "11B"
+      ]
+    },
+    "directorGrupo": "10B",
+    "modulos": [
+      "directores"
+    ]
   },
   "madridjames22@gmail.com": {
     "nombre": "James Madrid",
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Ingles": ["9B", "10A", "10B", "11A", "11B"]
-    }
+      "Ingles": [
+        "9B",
+        "10A",
+        "10B",
+        "11A",
+        "11B"
+      ]
+    },
+    "directorGrupo": "10A",
+    "modulos": [
+      "directores"
+    ]
   },
   "limarpa88@gmail.com": {
     "nombre": "Lina Marcela Palomino Alcalde",
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Ingles": ["6B", "7A", "7B", "8A", "8B", "9A"]
-    }
+      "Ingles": [
+        "6B",
+        "7A",
+        "7B",
+        "8A",
+        "8B",
+        "9A"
+      ]
+    },
+    "directorGrupo": "7A",
+    "modulos": [
+      "directores"
+    ]
   },
   "lizethpachanga1712@gmail.com": {
     "nombre": "Lizeth Herlinda Castaño Brohokyz",
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Lengua Castellana": ["8A", "9A", "9B", "10A", "10B", "11A", "11B"]
-    }
+      "Lengua Castellana": [
+        "8A",
+        "9A",
+        "9B",
+        "10A",
+        "10B",
+        "11A",
+        "11B"
+      ]
+    },
+    "directorGrupo": "9A",
+    "modulos": [
+      "directores"
+    ]
   },
   "carmenmarinarivera2021@gmail.com": {
     "nombre": "Carmen Marina González Rivera",
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Biología": ["8A", "8B", "9A", "9B", "10A", "10B", "11A", "11B"]
-    }
+      "Biología": [
+        "8A",
+        "8B",
+        "9A",
+        "9B",
+        "10A",
+        "10B",
+        "11A",
+        "11B"
+      ]
+    },
+    "directorGrupo": "11B",
+    "modulos": [
+      "directores"
+    ]
   },
   "otravalent@gmail.com": {
     "nombre": "Leydi Valentina Cardona Restrepo",
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Ingles": ["3", "4A", "4B", "5A", "5B", "6A"]
+      "Ingles": [
+        "3",
+        "4A",
+        "4B",
+        "5A",
+        "5B",
+        "6A"
+      ]
     }
   },
   "deisybrme@gmail.com": {
@@ -132,32 +236,95 @@ const USUARIOS = {
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Ciencias Naturales": ["3", "4A", "4B"],
-      "Quimica": ["6B"]
-    }
+      "Ciencias Naturales": [
+        "3",
+        "4A",
+        "4B"
+      ],
+      "Quimica": [
+        "6B"
+      ]
+    },
+    "directorGrupo": "4A",
+    "modulos": [
+      "directores"
+    ]
   },
   "mkpmawo@gmail.com": {
     "nombre": "Fabián Ávila López",
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Ciencias Sociales": ["8A", "8B", "9A", "9B", "10A", "10B", "11A", "11B"]
-    }
+      "Ciencias Sociales": [
+        "8A",
+        "8B",
+        "9A",
+        "9B",
+        "10A",
+        "10B",
+        "11A",
+        "11B"
+      ]
+    },
+    "directorGrupo": "8A",
+    "modulos": [
+      "directores"
+    ]
   },
   "maryluzs1975@gmail.com": {
     "nombre": "Maryluz Sánchez Suárez",
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Lectura Critica": ["5B", "6A", "6B", "7A", "7B", "8A", "8B", "9A", "9B", "10A", "10B", "11A", "11B"]
-    }
+      "Lectura Critica": [
+        "5B",
+        "6A",
+        "6B",
+        "7A",
+        "7B",
+        "8A",
+        "8B",
+        "9A",
+        "9B",
+        "10A",
+        "10B",
+        "11A",
+        "11B"
+      ]
+    },
+    "directorGrupo": "9B",
+    "modulos": [
+      "directores"
+    ]
   },
   "informaticaclasf2020@gmail.com": {
     "nombre": "Fernando Casas Mora",
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Informatica": ["1A", "1B", "2A", "2B", "3", "4A", "4B", "5A", "5B", "6A", "6B", "7A", "7B", "8A", "8B", "9A", "9B", "10A", "10B", "11A", "11B"]
+      "Informatica": [
+        "1A",
+        "1B",
+        "2A",
+        "2B",
+        "3",
+        "4A",
+        "4B",
+        "5A",
+        "5B",
+        "6A",
+        "6B",
+        "7A",
+        "7B",
+        "8A",
+        "8B",
+        "9A",
+        "9B",
+        "10A",
+        "10B",
+        "11A",
+        "11B"
+      ]
     }
   },
   "dianacarolinaperezortiz@gmail.com": {
@@ -165,7 +332,29 @@ const USUARIOS = {
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Educación Fisica": ["1A", "1B", "2A", "2B", "3", "4A", "4B", "5A", "5B", "6A", "6B", "7A", "7B", "8A", "8B", "9A", "9B", "10A", "10B", "11A", "11B"]
+      "Educación Fisica": [
+        "1A",
+        "1B",
+        "2A",
+        "2B",
+        "3",
+        "4A",
+        "4B",
+        "5A",
+        "5B",
+        "6A",
+        "6B",
+        "7A",
+        "7B",
+        "8A",
+        "8B",
+        "9A",
+        "9B",
+        "10A",
+        "10B",
+        "11A",
+        "11B"
+      ]
     }
   },
   "isabellamerchancano@gmail.com": {
@@ -173,15 +362,47 @@ const USUARIOS = {
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Speaking Club": ["1A", "1B", "2A", "2B", "3", "4A", "4B", "5A", "5B"]
-    }
+      "Speaking Club": [
+        "1A",
+        "1B",
+        "2A",
+        "2B",
+        "3",
+        "4A",
+        "4B",
+        "5A",
+        "5B"
+      ]
+    },
+    "directorGrupo": "4B",
+    "modulos": [
+      "directores"
+    ]
   },
   "anerpalacios2021@gmail.com": {
     "nombre": "Aner Palacios Cortes",
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Danza": ["1A", "1B", "2A", "2B", "3", "4A", "4B", "5A", "5B", "6A", "6B", "7A", "7B", "8A", "8B", "9A", "9B"]
+      "Danza": [
+        "1A",
+        "1B",
+        "2A",
+        "2B",
+        "3",
+        "4A",
+        "4B",
+        "5A",
+        "5B",
+        "6A",
+        "6B",
+        "7A",
+        "7B",
+        "8A",
+        "8B",
+        "9A",
+        "9B"
+      ]
     }
   },
   "jerardmeusburger2017@gmail.com": {
@@ -189,7 +410,12 @@ const USUARIOS = {
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Ingles": ["1A", "1B", "2A", "2B"]
+      "Ingles": [
+        "1A",
+        "1B",
+        "2A",
+        "2B"
+      ]
     }
   },
   "lindaresjean9@gmail.com": {
@@ -197,17 +423,223 @@ const USUARIOS = {
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Matemáticas": ["3", "4A", "4B", "5A"]
-    }
+      "Matemáticas": [
+        "3",
+        "4A",
+        "4B",
+        "5A"
+      ],
+      "Etica": [
+        "6A"
+      ]
+    },
+    "directorGrupo": "3",
+    "modulos": [
+      "directores"
+    ]
   },
   "gabriel.paloher12@gmail.com": {
     "nombre": "Gabriel Palomino",
     "rol": "docente",
     "estado": "confirmado",
     "materias": {
-      "Biología": ["5A", "5B", "6A", "6B", "7A", "7B"],
-      "Quimica": ["6A", "7A"]
+      "Biología": [
+        "5A",
+        "5B",
+        "6A",
+        "6B",
+        "7A",
+        "7B"
+      ],
+      "Quimica": [
+        "6A",
+        "7A"
+      ]
+    },
+    "directorGrupo": "6A",
+    "modulos": [
+      "directores"
+    ]
+  },
+  "josemaginsalcedomonroy@gmail.com": {
+    "nombre": "José Magin Salcedo Monroy",
+    "rol": "docente",
+    "estado": "confirmado",
+    "materias": {
+      "Matemáticas": [
+        "5B",
+        "6A",
+        "6B",
+        "7A"
+      ],
+      "Fisica": [
+        "6A",
+        "6B"
+      ]
+    },
+    "directorGrupo": "6B",
+    "modulos": [
+      "directores"
+    ]
+  },
+  "jalcala.0323@gmail.com": {
+    "nombre": "Juan Manuel Alcalá Romero",
+    "rol": "docente",
+    "estado": "confirmado",
+    "materias": {
+      "Fisica": [
+        "7A",
+        "7B",
+        "8A",
+        "8B",
+        "9A",
+        "9B",
+        "10A",
+        "10B",
+        "11A",
+        "11B"
+      ]
+    },
+    "directorGrupo": "11A",
+    "modulos": [
+      "directores"
+    ]
+  },
+  "erikcanocastellano@gmail.com": {
+    "nombre": "Erik Cano",
+    "rol": "docente",
+    "estado": "confirmado",
+    "materias": {
+      "Filosofia": [
+        "10A",
+        "10B",
+        "11A",
+        "11B"
+      ],
+      "Ciencias Sociales": [
+        "6B",
+        "7A",
+        "7B"
+      ]
+    },
+    "directorGrupo": "7B",
+    "modulos": [
+      "directores"
+    ]
+  },
+  "alequiroli82@gmail.com": {
+    "nombre": "Alejandro Quiroga Lizarazo",
+    "rol": "docente",
+    "estado": "confirmado",
+    "materias": {
+      "Etica": [
+        "6B",
+        "7A",
+        "7B",
+        "8A",
+        "8B",
+        "9A",
+        "9B",
+        "10A",
+        "10B",
+        "11A",
+        "11B"
+      ],
+      "Religion": [
+        "3",
+        "4A",
+        "4B",
+        "5A",
+        "5B",
+        "6A",
+        "6B",
+        "7A",
+        "7B",
+        "8A",
+        "8B",
+        "9A",
+        "9B",
+        "10A",
+        "10B",
+        "11A",
+        "11B"
+      ]
     }
+  },
+  "giraldogiraldox@gmail.com": {
+    "nombre": "Jimena Giraldo Giraldo",
+    "rol": "docente",
+    "estado": "confirmado",
+    "materias": {
+      "Lengua Castellana": [
+        "6A",
+        "6B",
+        "7A",
+        "7B",
+        "8B"
+      ],
+      "Etica": [
+        "3",
+        "4A",
+        "4B",
+        "5A",
+        "5B"
+      ],
+      "Lectura Critica": [
+        "4B",
+        "5A"
+      ]
+    }
+  },
+  "jennyesmeraldamunozmora1810@gmail.com": {
+    "nombre": "Jenny Esmeralda Muñoz Mora",
+    "rol": "docente",
+    "estado": "confirmado",
+    "materias": {
+      "Lectura Critica": [
+        "3",
+        "4A"
+      ],
+      "Lengua Castellana": [
+        "3",
+        "4A",
+        "4B",
+        "5A",
+        "5B"
+      ]
+    },
+    "directorGrupo": "5A",
+    "modulos": [
+      "directores"
+    ]
+  },
+  "saxopiano16@gmail.com": {
+    "nombre": "Sebastián Rincones",
+    "rol": "docente",
+    "estado": "confirmado",
+    "materias": {
+      "Ciencias Sociales": [
+        "3",
+        "4A",
+        "4B",
+        "5A",
+        "5B",
+        "6A"
+      ]
+    },
+    "directorGrupo": "5B",
+    "modulos": [
+      "directores"
+    ]
+  },
+  "academico.clasf@gmail.com": {
+    "nombre": "Superadmin Académico CLASF",
+    "rol": "visor_global",
+    "estado": "confirmado",
+    "modulos": [
+      "coordinacion",
+      "directores"
+    ]
   }
 };
 
@@ -429,15 +861,34 @@ function limpiarTimeoutCorteProgramado() {
 
 function puedeUsarCoordinacion(perfil = currentPerfil) {
   if (!perfil) return false;
-  return perfil.rol === 'coordinador' || (Array.isArray(perfil.modulos) && perfil.modulos.includes('coordinacion'));
+  return perfil.rol === 'coordinador' || perfil.rol === 'visor_global' || (Array.isArray(perfil.modulos) && perfil.modulos.includes('coordinacion'));
+}
+
+function esVisorGlobal(perfil = currentPerfil) {
+  return !!perfil && perfil.rol === 'visor_global';
+}
+
+function puedeUsarDirectores(perfil = currentPerfil) {
+  if (!perfil) return false;
+  return esVisorGlobal(perfil) || !!perfil.directorGrupo || (Array.isArray(perfil.modulos) && perfil.modulos.includes('directores'));
+}
+
+function gruposDirectorVisibles(perfil = currentPerfil) {
+  if (!perfil) return [];
+  if (esVisorGlobal(perfil)) {
+    const grupos = new Set();
+    Object.values(USUARIOS).forEach(p => {
+      if (p?.directorGrupo) grupos.add(p.directorGrupo);
+    });
+    return GRUPOS_ORDEN.filter(g => grupos.has(g));
+  }
+  return perfil.directorGrupo ? [perfil.directorGrupo] : [];
 }
 
 function cambiarVista(vista) {
   currentVista = vista;
-  if (vista === 'coordinacion') {
-    currentGrupo = null;
-    configGrupo = null;
-  }
+  currentGrupo = null;
+  configGrupo = null;
   renderApp(currentUser);
 }
 
@@ -743,6 +1194,63 @@ function programarGeneracionAutomatica(config) {
   }, ms);
 }
 
+
+function obtenerMetricasDashboardCoordinacion() {
+  const totalEstudiantes = Object.values(ESTUDIANTES).reduce((acc, lista) => acc + (Array.isArray(lista) ? lista.length : 0), 0);
+  const materiasActivas = new Set();
+  const docentesOperativos = new Set();
+  const gruposOperativos = new Set();
+
+  Object.entries(USUARIOS).forEach(([correo, perfil]) => {
+    if (!perfil || perfil.rol !== 'docente' || perfil.estado !== 'confirmado') return;
+    const materias = perfil.materias || {};
+    const nombresMaterias = Object.keys(materias).filter(nombre => Array.isArray(materias[nombre]) && materias[nombre].length > 0);
+    if (!nombresMaterias.length) return;
+
+    docentesOperativos.add(correo);
+    nombresMaterias.forEach(nombre => {
+      materiasActivas.add(nombre);
+      (materias[nombre] || []).forEach(grupo => gruposOperativos.add(grupo));
+    });
+  });
+
+  return {
+    totalEstudiantes,
+    totalAsignaturasActivas: materiasActivas.size,
+    totalDocentesOperativos: docentesOperativos.size,
+    totalGruposOperativos: gruposOperativos.size
+  };
+}
+
+function renderDashboardCoordinacion(metricas) {
+  return `
+    <div class="coord-section coord-dashboard-section">
+      <div class="coord-section-head">
+        <h3>Dashboard general de la plataforma</h3>
+        <div class="coord-meta-inline">
+          <span><strong>Grupos operativos:</strong> ${metricas.totalGruposOperativos}</span>
+          <span><strong>Período:</strong> ${PERIODO}</span>
+        </div>
+      </div>
+
+      <div class="coord-summary-grid">
+        <div class="coord-summary-card">
+          <span class="coord-summary-num">${metricas.totalEstudiantes}</span>
+          <span class="coord-summary-lbl">Estudiantes en plataforma</span>
+        </div>
+        <div class="coord-summary-card">
+          <span class="coord-summary-num">${metricas.totalAsignaturasActivas}</span>
+          <span class="coord-summary-lbl">Asignaturas operativas</span>
+        </div>
+        <div class="coord-summary-card">
+          <span class="coord-summary-num">${metricas.totalDocentesOperativos}</span>
+          <span class="coord-summary-lbl">Docentes operativos</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderResumenCorte(corte, detalle) {
   const estudiantes = detalle?.estudiantes || [];
   const docentes = detalle?.docentes || [];
@@ -850,9 +1358,11 @@ async function renderCoordinationPanel(forzarRefresco = false) {
     return;
   }
 
+  const soloLectura = esVisorGlobal();
   $('topbar-title').textContent = 'Coordinación académica · Reporte de mitad de periodo';
-  $('topbar-actions').innerHTML = `<button class="btn-secondary btn-sm" id="btn-volver-planillas">📚 Volver a planillas</button>`;
-  $('btn-volver-planillas').onclick = () => cambiarVista('planillas');
+  $('topbar-actions').innerHTML = `${nombresMateriasDelPerfil().length ? '<button class="btn-secondary btn-sm" id="btn-volver-planillas">📚 Volver a planillas</button>' : ''}${puedeUsarDirectores() ? '<button class="btn-secondary btn-sm" id="btn-ir-directores">👥 Directores</button>' : ''}`;
+  if ($('btn-volver-planillas')) $('btn-volver-planillas').onclick = () => cambiarVista('planillas');
+  if ($('btn-ir-directores')) $('btn-ir-directores').onclick = () => cambiarVista('directores');
 
   if (!forzarRefresco) setLoading('Cargando coordinación académica...');
   try {
@@ -861,6 +1371,7 @@ async function renderCoordinationPanel(forzarRefresco = false) {
       obtenerUltimoCorteMitadPeriodo()
     ]);
     const detalle = ultimo ? await cargarDetalleCorteMitadPeriodo(ultimo.id) : null;
+    const metricasDashboard = obtenerMetricasDashboardCoordinacion();
     clearLoading();
 
     const ahora = Date.now();
@@ -888,14 +1399,17 @@ async function renderCoordinationPanel(forzarRefresco = false) {
           </div>
         </div>
 
+        ${renderDashboardCoordinacion(metricasDashboard)}
+
         <div class="coord-grid">
           <div class="coord-card">
             <h3>Programación del corte</h3>
             <label class="coord-label">Fecha y hora oficial del corte (Bogotá)</label>
-            <input type="datetime-local" id="coord-corte-input" class="coord-input" value="${fechaISOAInput(config?.corteOficialISO)}">
+            <input type="datetime-local" id="coord-corte-input" class="coord-input" value="${fechaISOAInput(config?.corteOficialISO)}" ${soloLectura ? 'disabled' : ''}>
             <div class="coord-actions">
-              <button class="btn-primary btn-sm" id="btn-guardar-programacion">Guardar programación</button>
-              <button class="btn-secondary btn-sm" id="btn-generar-corte">Generar corte ahora</button>
+              ${soloLectura
+                ? '<span class="coord-note"><strong>Modo solo lectura:</strong> este usuario puede consultar toda la información, pero no modificar la programación ni generar cortes.</span>'
+                : '<button class="btn-primary btn-sm" id="btn-guardar-programacion">Guardar programación</button><button class="btn-secondary btn-sm" id="btn-generar-corte">Generar corte ahora</button>'}
             </div>
             <div class="coord-note">
               <strong>Nota alpha:</strong> si dejas esta pantalla abierta, el sistema puede generar el corte automáticamente a la hora programada. Si el navegador está cerrado, quedará como <em>pendiente por generar</em>.
@@ -919,7 +1433,7 @@ async function renderCoordinationPanel(forzarRefresco = false) {
       </div>
     `;
 
-    $('btn-guardar-programacion').onclick = async () => {
+    if (!soloLectura && $('btn-guardar-programacion')) $('btn-guardar-programacion').onclick = async () => {
       const valor = $('coord-corte-input').value;
       if (!valor) {
         toast('Selecciona fecha y hora del corte', 'err');
@@ -945,12 +1459,12 @@ async function renderCoordinationPanel(forzarRefresco = false) {
       }
     };
 
-    $('btn-generar-corte').onclick = async () => {
+    if (!soloLectura && $('btn-generar-corte')) $('btn-generar-corte').onclick = async () => {
       const valor = $('coord-corte-input').value;
       const corteOficialISO = valor ? fechaInputAISO(valor) : (config?.corteOficialISO || new Date().toISOString());
       setLoading('Generando corte de mitad de periodo...');
       try {
-        const resultado = await generarCorteMitadPeriodo({
+        await generarCorteMitadPeriodo({
           corteOficialISO,
           creadoPor: nombreDocenteActual(),
           modo: 'manual'
@@ -965,7 +1479,7 @@ async function renderCoordinationPanel(forzarRefresco = false) {
       }
     };
 
-    programarGeneracionAutomatica(config);
+    if (!soloLectura) programarGeneracionAutomatica(config); else limpiarTimeoutCorteProgramado();
   } catch (e) {
     console.error(e);
     clearLoading();
@@ -990,6 +1504,73 @@ function renderWelcomePanel(user, materias, gruposMateria) {
       </div>
     </div>
   `;
+}
+
+
+function renderDirectorWelcomePanel(user, gruposDirector) {
+  $('topbar-title').textContent = 'Directores de grupo · Consulta';
+  $('topbar-actions').innerHTML = '';
+  const mensaje = esVisorGlobal()
+    ? 'Selecciona un grupo director en el panel izquierdo para consultar su listado de estudiantes.'
+    : `Puedes consultar únicamente el listado de estudiantes de tu grupo director${gruposDirector[0] ? ` (${nombreGrupo(gruposDirector[0])})` : ''}.`;
+  $('panel-grupo').innerHTML = `
+    <div class="welcome-msg welcome-msg-pro">
+      <div class="welcome-brand">
+        <img src="${LOGO_MIRAI}" alt="Mirai Academic" class="welcome-mirai-logo">
+      </div>
+      <h2>Módulo de directores de grupo</h2>
+      <p>${mensaje}</p>
+      <div class="stats-row">
+        <div class="stat-box"><span class="stat-num">${gruposDirector.length}</span><span class="stat-lbl">Grupos visibles</span></div>
+        <div class="stat-box"><span class="stat-num">${gruposDirector.reduce((acc, g) => acc + ((ESTUDIANTES[g] || []).length), 0)}</span><span class="stat-lbl">Estudiantes listados</span></div>
+        <div class="stat-box"><span class="stat-num">${PERIODO}</span><span class="stat-lbl">Período</span></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderModuloDirectorGrupo(grupo) {
+  const estudiantes = [...(ESTUDIANTES[grupo] || [])].sort((a, b) => a.localeCompare(b, 'es'));
+  $('topbar-title').textContent = `Directores de grupo · ${nombreGrupo(grupo)}`;
+  $('topbar-actions').innerHTML = '';
+  $('panel-grupo').innerHTML = `
+    <div class="coord-wrap">
+      <div class="coord-hero">
+        <div>
+          <h2>Listado de estudiantes</h2>
+          <p>Consulta rápida del grupo <strong>${nombreGrupo(grupo)}</strong>. Este módulo es solo de lectura.</p>
+        </div>
+        <div class="coord-status idle">
+          <span class="coord-status-label">Total</span>
+          <strong>${estudiantes.length}</strong>
+        </div>
+      </div>
+      <div class="coord-card">
+        <h3>${nombreGrupo(grupo)}</h3>
+        <div class="tabla-scroll">
+          <table class="coord-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Estudiante</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${estudiantes.length ? estudiantes.map((nombre, idx) => `<tr><td>${idx + 1}</td><td>${nombre}</td></tr>`).join('') : '<tr><td colspan="2" class="td-empty">No hay estudiantes cargados para este grupo.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function abrirGrupoDirector(grupo) {
+  currentGrupo = grupo;
+  $('sidebar').classList.remove('open');
+  document.querySelectorAll('.nav-director-grupo').forEach(b => b.classList.remove('active'));
+  $(`nav-director-${grupo}`)?.classList.add('active');
+  renderModuloDirectorGrupo(grupo);
 }
 
 // ── RENDER PRINCIPAL ───────────────────────────────────────────────────────
@@ -1038,6 +1619,16 @@ function renderApp(user) {
   const gruposPrimaria = gruposMateria.filter(g => ['1A','1B','2A','2B','3','4A','4B','5A','5B'].includes(g));
   const gruposBachillerato = gruposMateria.filter(g => ['6A','6B','7A','7B','8A','8B','9A','9B','10A','10B','11A','11B'].includes(g));
   const tieneModuloCoordinacion = puedeUsarCoordinacion();
+  const tieneModuloDirectores = puedeUsarDirectores();
+  const gruposDirector = gruposDirectorVisibles();
+  const gruposDirectorPrimaria = gruposDirector.filter(g => ['1A','1B','2A','2B','3','4A','4B','5A','5B'].includes(g));
+  const gruposDirectorBachillerato = gruposDirector.filter(g => ['6A','6B','7A','7B','8A','8B','9A','9B','10A','10B','11A','11B'].includes(g));
+
+  if (currentVista === 'planillas' && !materias.length) {
+    currentVista = tieneModuloCoordinacion ? 'coordinacion' : (tieneModuloDirectores ? 'directores' : 'planillas');
+  }
+  if (currentVista === 'coordinacion' && !tieneModuloCoordinacion) currentVista = materias.length ? 'planillas' : (tieneModuloDirectores ? 'directores' : 'planillas');
+  if (currentVista === 'directores' && !tieneModuloDirectores) currentVista = materias.length ? 'planillas' : (tieneModuloCoordinacion ? 'coordinacion' : 'planillas');
 
   $('app').innerHTML = `
     <div class="layout">
@@ -1063,22 +1654,30 @@ function renderApp(user) {
         </div>
 
         <div class="sidebar-modules">
-          <button class="module-btn ${currentVista === 'planillas' ? 'active' : ''}" id="btn-module-planillas">📚 Planillas</button>
+          ${materias.length ? `<button class="module-btn ${currentVista === 'planillas' ? 'active' : ''}" id="btn-module-planillas">📚 Planillas</button>` : ''}
           ${tieneModuloCoordinacion ? `<button class="module-btn ${currentVista === 'coordinacion' ? 'active' : ''}" id="btn-module-coordinacion">🗂 Coordinación</button>` : ''}
+          ${tieneModuloDirectores ? `<button class="module-btn ${currentVista === 'directores' ? 'active' : ''}" id="btn-module-directores">👥 Directores</button>` : ''}
         </div>
 
-        <div class="sidebar-subjects ${currentVista === 'coordinacion' ? 'is-hidden' : ''}">
+        <div class="sidebar-subjects ${currentVista === 'coordinacion' || currentVista === 'directores' ? 'is-hidden' : ''}">
           <div class="nav-section-label">ASIGNATURAS</div>
           <div class="subject-list">
-            ${materias.map(m => `<button class="nav-materia ${m===currentMateria?'active':''}" data-materia="${m}">${m}</button>`).join('')}
+            ${materias.length ? materias.map(m => `<button class="nav-materia ${m===currentMateria?'active':''}" data-materia="${m}">${m}</button>`).join('') : '<div class="nav-empty">Sin asignaturas asignadas</div>'}
           </div>
         </div>
 
-        <nav class="sidebar-nav ${currentVista === 'coordinacion' ? 'is-hidden' : ''}">
+        <nav class="sidebar-nav ${currentVista !== 'planillas' ? 'is-hidden' : ''}">
           <div class="nav-section-label">PRIMARIA</div>
           ${gruposPrimaria.map(renderNavGrupoButton).join('') || '<div class="nav-empty">Sin grupos en primaria</div>'}
           <div class="nav-section-label">BACHILLERATO</div>
           ${gruposBachillerato.map(renderNavGrupoButton).join('') || '<div class="nav-empty">Sin grupos en bachillerato</div>'}
+        </nav>
+
+        <nav class="sidebar-nav ${currentVista !== 'directores' ? 'is-hidden' : ''}">
+          <div class="nav-section-label">PRIMARIA</div>
+          ${gruposDirectorPrimaria.map(g => `<button class="nav-grupo nav-director-grupo ${currentGrupo===g?'active':''}" data-grupo="${g}" id="nav-director-${g}">${g.replace('A',' A').replace('B',' B').replace('10',' 10').replace('11',' 11').trim()}</button>`).join('') || '<div class="nav-empty">Sin grupos en primaria</div>'}
+          <div class="nav-section-label">BACHILLERATO</div>
+          ${gruposDirectorBachillerato.map(g => `<button class="nav-grupo nav-director-grupo ${currentGrupo===g?'active':''}" data-grupo="${g}" id="nav-director-${g}">${g.replace('A',' A').replace('B',' B').replace('10',' 10').replace('11',' 11').trim()}</button>`).join('') || '<div class="nav-empty">Sin grupos en bachillerato</div>'}
         </nav>
 
         <div class="sidebar-footer">
@@ -1112,16 +1711,22 @@ function renderApp(user) {
   document.querySelectorAll('.nav-materia').forEach(btn => {
     btn.onclick = () => cambiarMateria(btn.dataset.materia);
   });
+  document.querySelectorAll('.nav-director-grupo').forEach(btn => {
+    btn.onclick = () => abrirGrupoDirector(btn.dataset.grupo);
+  });
 
   $('btn-signout').onclick = () => auth.signOut();
   $('btn-menu').onclick = () => $('sidebar').classList.toggle('open');
   $('sidebar-close').onclick = () => $('sidebar').classList.remove('open');
   $('modal-close-config').onclick = () => hide('modal-config');
-  $('btn-module-planillas').onclick = () => cambiarVista('planillas');
+  if ($('btn-module-planillas')) $('btn-module-planillas').onclick = () => cambiarVista('planillas');
   if ($('btn-module-coordinacion')) $('btn-module-coordinacion').onclick = () => cambiarVista('coordinacion');
+  if ($('btn-module-directores')) $('btn-module-directores').onclick = () => cambiarVista('directores');
 
   if (currentVista === 'coordinacion' && tieneModuloCoordinacion) {
     renderCoordinationPanel();
+  } else if (currentVista === 'directores' && tieneModuloDirectores) {
+    renderDirectorWelcomePanel(user, gruposDirector);
   } else {
     currentVista = 'planillas';
     renderWelcomePanel(user, materias, gruposMateria);
@@ -1151,10 +1756,9 @@ async function abrirGrupo(grupo) {
     clearLoading();
 
     if (!configGrupo) {
-      mostrarPanelConfigInicial(grupo, grupoBonito);
-    } else {
-      renderPlanilla(grupo, grupoBonito);
+      configGrupo = {modo: 'EQUITATIVO', actividades: []};
     }
+    renderPlanilla(grupo, grupoBonito);
   } catch(e) {
     clearLoading();
     toast('Error cargando datos', 'err');
@@ -1423,6 +2027,15 @@ function renderPlanilla(grupo, nombreGrupo) {
         </table>
       </div>
 
+      <div class="barra-actividades">
+        <button class="btn-add-actividad" id="btn-add-act-planilla">＋ Nueva actividad</button>
+        <div class="modo-selector">
+          <span class="modo-label">Modo:</span>
+          <button class="toggle-modo-btn ${config.modo==='EQUITATIVO'?'tmb-active':''}" id="btn-modo-eq" data-modo="EQUITATIVO">Equitativo</button>
+          <button class="toggle-modo-btn ${config.modo==='PORCENTAJES'?'tmb-active':''}" id="btn-modo-pct" data-modo="PORCENTAJES">Porcentajes</button>
+        </div>
+      </div>
+
       <div class="leyenda">
         <span><strong>Códigos:</strong></span>
         <span class="cod-esp-demo">NP</span> No presentó ·
@@ -1443,6 +2056,30 @@ function renderPlanilla(grupo, nombreGrupo) {
   });
 
   $('btn-guardar-todo').onclick = () => guardarTodo(grupo, estudiantes, config);
+
+  // Botón nueva actividad
+  const btnAdd = $('btn-add-act-planilla');
+  if (btnAdd) {
+    btnAdd.onclick = () => agregarActividad(grupo, nombreGrupo);
+  }
+
+  // Botones modo
+  document.querySelectorAll('.toggle-modo-btn').forEach(btn => {
+    btn.onclick = async () => {
+      configGrupo.modo = btn.dataset.modo;
+      setLoading('Guardando modo...');
+      try {
+        await guardarConfig(grupo, currentMateria, configGrupo);
+        clearLoading();
+        toast(`Modo cambiado a ${configGrupo.modo} ✓`);
+        renderPlanilla(grupo, nombreGrupo);
+      } catch(e) {
+        clearLoading();
+        toast('Error guardando modo', 'err');
+      }
+    };
+  });
+
   actualizarResumen(grupo, estudiantes, config);
 }
 
@@ -1577,7 +2214,7 @@ function agregarActividad(grupo, nombreGrupo) {
     configGrupo.actividades.push({letra, nombre, peso});
     setLoading('Guardando actividad...');
     try {
-      await guardarConfig(grupo, configGrupo);
+      await guardarConfig(grupo, currentMateria, configGrupo);
       clearLoading();
       cerrar();
       toast(`Actividad ${letra} — "${nombre}" agregada ✓`);
@@ -1629,7 +2266,7 @@ auth.onAuthStateChanged(user => {
 
     currentUser = user;
     currentPerfil = perfil;
-    currentVista = 'planillas';
+    currentVista = perfil.rol === 'visor_global' ? 'coordinacion' : 'planillas';
     asegurarMateriaActual();
     renderApp(user);
   } else {
