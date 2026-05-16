@@ -918,7 +918,7 @@ function puedeUsarCoordinacion(perfil = currentPerfil) {
 }
 function puedeUsarMiGrupo(perfil = currentPerfil) {
   if (!perfil) return false;
-  return perfil.rol === 'admin' || !!perfil.directorGrupo;
+  return perfil.rol === 'admin' || perfil.rol === 'visor_global' || !!perfil.directorGrupo;
 }
 
 function etiquetaModuloMiGrupo(perfil = currentPerfil) {
