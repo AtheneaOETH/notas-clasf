@@ -1549,18 +1549,189 @@ function inicializarSelectorMiGrupo() {
   };
 }
 
+
+function htmlSeguroMiGrupo(valor) {
+  return String(valor ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function nombreArchivoSeguroMiGrupo(valor) {
+  return String(valor || 'reporte')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase();
+}
+
+function descargarArchivoMiGrupo(nombreArchivo, contenido, tipo = 'text/html;charset=utf-8') {
+  const blob = new Blob([contenido], { type: tipo });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function cssReporteMiGrupo() {
+  return `
+    <style>
+      @page { size: letter landscape; margin: 1.2cm; }
+      body { font-family: Arial, sans-serif; color: #111; margin: 0; font-size: 11px; }
+      .header { display: flex; align-items: center; gap: 14px; border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 14px; }
+      .logo { width: 58px; height: 58px; object-fit: contain; }
+      h1 { margin: 0; font-size: 18px; }
+      h2 { margin: 2px 0 0; font-size: 13px; font-weight: normal; }
+      .meta { margin: 10px 0 14px; font-size: 11px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #999; padding: 5px 6px; vertical-align: top; }
+      th { background: #eee; text-align: left; }
+      .perdiendo { color: #b00020; font-weight: bold; }
+      .ok { color: #111; }
+      .sininfo { color: #777; font-style: italic; }
+      .footer { margin-top: 18px; font-size: 10px; color: #555; }
+      .page-break { page-break-before: always; }
+      @media print { .no-print { display: none; } }
+    </style>`;
+}
+
+function registrarContextoReporteMiGrupo(grupo, filasOrdenadas, materias, tipoCorte) {
+  window.__miGrupoReporteContextos = window.__miGrupoReporteContextos || {};
+  window.__miGrupoReporteContextos[grupo] = {
+    grupo,
+    grupoNombre: nombreGrupo(grupo),
+    filas: filasOrdenadas || [],
+    materias: materias || [],
+    tipoCorte,
+    tipoEtiqueta: etiquetaTipoCorte(tipoCorte),
+    generado: new Date().toISOString()
+  };
+}
+
+function claseReporteMateriaMiGrupo(registro) {
+  if (!registro || registro.estado === 'sin_informacion') return 'sininfo';
+  if (Number(registro.nota) < MIN_APROBATORIO) return 'perdiendo';
+  return 'ok';
+}
+
+function textoNotaReporteMiGrupo(registro) {
+  if (!registro) return '—';
+  if (registro.estado === 'sin_informacion') return 'S/I';
+  if (registro.nota === null || registro.nota === undefined || Number.isNaN(Number(registro.nota))) return 'S/I';
+  return Number(registro.nota).toFixed(2);
+}
+
+function construirTablaConsolidadoMiGrupo(ctx) {
+  const headMaterias = ctx.materias.map(m => `<th>${htmlSeguroMiGrupo(m)}</th>`).join('');
+  const filas = ctx.filas.map(item => {
+    const mapa = construirMapaMateriasDeDirector(item);
+    const promedio = item.promedioEstudiantil ?? promedioEstudiantilMiGrupo(item);
+    const celdas = ctx.materias.map(materia => {
+      const registro = mapa[materia];
+      return `<td class="${claseReporteMateriaMiGrupo(registro)}">${htmlSeguroMiGrupo(textoNotaReporteMiGrupo(registro))}</td>`;
+    }).join('');
+    return `<tr>
+      <td>${htmlSeguroMiGrupo(item.nombre)}</td>
+      <td>${item.perdiendoCount || 0}</td>
+      <td>${promedio === null || promedio === undefined ? 'S/I' : Number(promedio).toFixed(2)}</td>
+      ${celdas}
+    </tr>`;
+  }).join('');
+
+  return `<table>
+    <thead><tr><th>Estudiante</th><th>Asignaturas reprobando</th><th>Promedio estudiantil</th>${headMaterias}</tr></thead>
+    <tbody>${filas}</tbody>
+  </table>`;
+}
+
+function plantillaReporteMiGrupo(titulo, subtitulo, cuerpo) {
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${htmlSeguroMiGrupo(titulo)}</title>${cssReporteMiGrupo()}</head><body>
+    <div class="header">
+      <img class="logo" src="${LOGO_COLEGIO}" alt="Logo">
+      <div>
+        <h1>${htmlSeguroMiGrupo(titulo)}</h1>
+        <h2>${htmlSeguroMiGrupo(subtitulo)}</h2>
+      </div>
+    </div>
+    ${cuerpo}
+    <div class="footer">Reporte generado desde Mirai Academic. Puedes abrir este archivo e imprimirlo o guardarlo como PDF.</div>
+  </body></html>`;
+}
+
+function descargarConsolidadoMiGrupo(grupo) {
+  const ctx = window.__miGrupoReporteContextos?.[grupo];
+  if (!ctx) { toast?.('No hay datos de Mi Grupo para descargar', 'err'); return; }
+  const cuerpo = `
+    <div class="meta"><strong>Grupo:</strong> ${htmlSeguroMiGrupo(ctx.grupoNombre)} · <strong>Tipo de corte:</strong> ${htmlSeguroMiGrupo(ctx.tipoEtiqueta)} · <strong>Generado:</strong> ${formatearFechaBogota(ctx.generado)}</div>
+    ${construirTablaConsolidadoMiGrupo(ctx)}
+  `;
+  const html = plantillaReporteMiGrupo(
+    `Consolidado de notas · ${ctx.grupoNombre}`,
+    `${ctx.tipoEtiqueta}`,
+    cuerpo
+  );
+  descargarArchivoMiGrupo(`consolidado_notas_${nombreArchivoSeguroMiGrupo(ctx.grupoNombre)}_${nombreArchivoSeguroMiGrupo(ctx.tipoCorte)}.html`, html);
+}
+
+function construirListadoReprobadasEstudiante(item) {
+  const reprobadas = (item.materias || []).filter(m =>
+    m && m.estado !== 'sin_informacion' && m.nota !== null && m.nota !== undefined && !Number.isNaN(Number(m.nota)) && Number(m.nota) < MIN_APROBATORIO
+  ).sort((a, b) => Number(a.nota) - Number(b.nota));
+
+  if (!reprobadas.length) {
+    return `<p>Al momento del corte seleccionado, el estudiante no registra asignaturas por debajo de ${MIN_APROBATORIO}.</p>`;
+  }
+
+  return `<table>
+    <thead><tr><th>Asignatura</th><th>Promedio</th></tr></thead>
+    <tbody>${reprobadas.map(m => `<tr><td>${htmlSeguroMiGrupo(m.materia)}</td><td class="perdiendo">${Number(m.nota).toFixed(2)}</td></tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function descargarReporteEstudianteMiGrupo(grupo, indice) {
+  const ctx = window.__miGrupoReporteContextos?.[grupo];
+  if (!ctx) { toast?.('No hay datos del grupo para descargar', 'err'); return; }
+  const item = ctx.filas[Number(indice)];
+  if (!item) { toast?.('No se encontró el estudiante seleccionado', 'err'); return; }
+  const promedio = item.promedioEstudiantil ?? promedioEstudiantilMiGrupo(item);
+  const cuerpo = `
+    <div class="meta">
+      <strong>Estudiante:</strong> ${htmlSeguroMiGrupo(item.nombre)}<br>
+      <strong>Grupo:</strong> ${htmlSeguroMiGrupo(ctx.grupoNombre)}<br>
+      <strong>Tipo de corte:</strong> ${htmlSeguroMiGrupo(ctx.tipoEtiqueta)}<br>
+      <strong>Promedio estudiantil:</strong> ${promedio === null || promedio === undefined ? 'S/I' : Number(promedio).toFixed(2)}<br>
+      <strong>Asignaturas reprobando:</strong> ${item.perdiendoCount || 0}
+    </div>
+    <h2>Asignaturas que va reprobando</h2>
+    ${construirListadoReprobadasEstudiante(item)}
+  `;
+  const html = plantillaReporteMiGrupo(
+    `Reporte académico individual`,
+    `${item.nombre} · ${ctx.grupoNombre}`,
+    cuerpo
+  );
+  descargarArchivoMiGrupo(`reporte_${nombreArchivoSeguroMiGrupo(item.nombre)}_${nombreArchivoSeguroMiGrupo(ctx.grupoNombre)}.html`, html);
+}
+
 function renderTablaMiGrupo(grupo, filasEstudiantes, tipoCorte = 'mitad_periodo_pac') {
   const filasOrdenadas = ordenarFilasMiGrupo(filasEstudiantes);
   const materias = Array.from(new Set(
     filasOrdenadas.flatMap(item => (item.materias || []).map(m => m.materia))
   )).sort((a, b) => a.localeCompare(b, 'es'));
+  registrarContextoReporteMiGrupo(grupo, filasOrdenadas, materias, tipoCorte);
 
   if (!filasOrdenadas.length) {
     return `<div class="coord-empty">No hay estudiantes reportados para ${nombreGrupo(grupo)} en el corte seleccionado.</div>`;
   }
 
   const head = materias.map(m => `<th>${m}</th>`).join('');
-  const body = filasOrdenadas.map(item => {
+  const body = filasOrdenadas.map((item, idx) => {
     const mapa = construirMapaMateriasDeDirector(item);
     const celdas = materias.map(materia => {
       const registro = mapa[materia];
@@ -1583,11 +1754,15 @@ function renderTablaMiGrupo(grupo, filasEstudiantes, tipoCorte = 'mitad_periodo_
         <td><span class="badge-pill badge-red">${item.perdiendoCount || 0}</span></td>
         <td>${promedioHtml}</td>
         ${celdas}
+        <td><button class="btn-secondary btn-sm" onclick="descargarReporteEstudianteMiGrupo('${grupo}', ${idx})">⬇️ Reporte</button></td>
       </tr>`;
   }).join('');
 
   return `
     <div class="coord-subsection">
+      <div class="coord-actions" style="margin-bottom:10px">
+        <button class="btn-primary btn-sm" onclick="descargarConsolidadoMiGrupo('${grupo}')">⬇️ Descargar consolidado de notas</button>
+      </div>
       <div class="coord-note" style="margin-bottom:10px">
         Ordenado de caso crítico a caso menos crítico: primero mayor número de asignaturas por debajo de ${MIN_APROBATORIO}, luego materias sin información, luego menor promedio estudiantil.
       </div>
@@ -1599,6 +1774,7 @@ function renderTablaMiGrupo(grupo, filasEstudiantes, tipoCorte = 'mitad_periodo_
               <th>Asignaturas perdiendo</th>
               <th>Promedio estudiantil</th>
               ${head}
+              <th>Reporte individual</th>
             </tr>
           </thead>
           <tbody>${body}</tbody>
@@ -2354,7 +2530,7 @@ function renderPlanilla(grupo, nombreGrupo) {
         <span class="cod-esp-demo">NP</span> No presentó ·
         <span class="cod-esp-demo">AUS</span> Ausente ·
         <span class="cod-esp-demo">EXC</span> Excusa ·
-        <span class="cod-esp-demo">PLA</span> Plana ·
+        <span class="cod-esp-demo">PLA</span> Plagio ·
         <span class="nota-ok-demo">≥3.8</span> Aprobado ·
         <span class="nota-alerta-demo">3.0–3.7</span> Alerta ·
         <span class="nota-mal-demo">&lt;3.0</span> Crítico
