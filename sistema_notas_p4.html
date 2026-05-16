@@ -1467,34 +1467,111 @@ function construirMapaMateriasDeDirector(filaEstudiante) {
   return mapa;
 }
 
-function renderTablaMiGrupo(grupo, filasEstudiantes) {
+function promedioEstudiantilMiGrupo(item) {
+  const materiasValidas = (item?.materias || []).filter(m =>
+    m && m.estado !== 'sin_informacion' && m.nota !== null && m.nota !== undefined && !Number.isNaN(Number(m.nota))
+  );
+  if (!materiasValidas.length) return null;
+  const suma = materiasValidas.reduce((acc, m) => acc + Number(m.nota), 0);
+  return Number((suma / materiasValidas.length).toFixed(2));
+}
+
+function ordenarFilasMiGrupo(filasEstudiantes) {
+  return [...(filasEstudiantes || [])]
+    .map(item => ({ ...item, promedioEstudiantil: promedioEstudiantilMiGrupo(item) }))
+    .sort((a, b) => {
+      const pa = a.perdiendoCount || 0;
+      const pb = b.perdiendoCount || 0;
+      if (pb !== pa) return pb - pa; // primero quien pierde más asignaturas
+
+      const sia = a.sinInfoCount || 0;
+      const sib = b.sinInfoCount || 0;
+      if (sib !== sia) return sib - sia; // luego quien tiene más materias sin información
+
+      const proma = a.promedioEstudiantil ?? 999;
+      const promb = b.promedioEstudiantil ?? 999;
+      if (proma !== promb) return proma - promb; // luego menor promedio
+
+      return String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es', { sensitivity: 'base' });
+    });
+}
+
+function tipoCorteMiGrupoActual() {
+  return localStorage.getItem('miGrupoTipoCorte') || 'mitad_periodo_pac';
+}
+
+function renderSelectorTipoCorteMiGrupo(tipoActual) {
+  return `
+    <div class="coord-card" style="margin-bottom:16px">
+      <h3>Tipo de corte para Mi Grupo</h3>
+      <label class="coord-label">Reporte visible</label>
+      <select id="mi-grupo-tipo-corte" class="coord-input">
+        <option value="mitad_periodo_pac" ${tipoActual === 'mitad_periodo_pac' ? 'selected' : ''}>Corte de mitad de periodo · PAC</option>
+        <option value="definitivo" ${tipoActual === 'definitivo' ? 'selected' : ''}>Corte definitivo · PAC + PAU</option>
+      </select>
+      <div class="coord-note">${descripcionTipoCorte(tipoActual)} El promedio estudiantil omite las asignaturas marcadas como <strong>Sin información</strong>.</div>
+    </div>
+  `;
+}
+
+function inicializarSelectorMiGrupo() {
+  const sel = $('mi-grupo-tipo-corte');
+  if (!sel) return;
+  sel.onchange = async () => {
+    localStorage.setItem('miGrupoTipoCorte', sel.value);
+    await renderMiGrupoPanel();
+  };
+}
+
+function renderTablaMiGrupo(grupo, filasEstudiantes, tipoCorte = 'mitad_periodo_pac') {
+  const filasOrdenadas = ordenarFilasMiGrupo(filasEstudiantes);
   const materias = Array.from(new Set(
-    filasEstudiantes.flatMap(item => (item.materias || []).map(m => m.materia))
+    filasOrdenadas.flatMap(item => (item.materias || []).map(m => m.materia))
   )).sort((a, b) => a.localeCompare(b, 'es'));
 
-  if (!filasEstudiantes.length) {
-    return `<div class="coord-empty">No hay estudiantes reportados para ${nombreGrupo(grupo)} en el último corte generado.</div>`;
+  if (!filasOrdenadas.length) {
+    return `<div class="coord-empty">No hay estudiantes reportados para ${nombreGrupo(grupo)} en el corte seleccionado.</div>`;
   }
 
   const head = materias.map(m => `<th>${m}</th>`).join('');
-  const body = filasEstudiantes.map(item => {
+  const body = filasOrdenadas.map(item => {
     const mapa = construirMapaMateriasDeDirector(item);
     const celdas = materias.map(materia => {
       const registro = mapa[materia];
       if (!registro) return `<td class="td-empty">—</td>`;
-      const texto = registro.estado === 'sin_informacion' ? 'Sin información' : (registro.nota ?? 'Al día');
-      return `<td><span class="materia-chip ${colorEstadoReporte(registro.estado)}">${texto}</span></td>`;
+      const texto = registro.estado === 'sin_informacion' ? 'S/I' : (registro.nota ?? 'Al día');
+      const titulo = registro.estado === 'sin_informacion'
+        ? 'Sin información suficiente para el corte'
+        : `${registro.materia || materia}: ${registro.nota}`;
+      return `<td title="${titulo}"><span class="materia-chip ${colorEstadoReporte(registro.estado)}">${texto}</span></td>`;
     }).join('');
-    return `<tr><td><strong>${item.nombre}</strong></td>${celdas}</tr>`;
+
+    const promedio = item.promedioEstudiantil ?? promedioEstudiantilMiGrupo(item);
+    const promedioHtml = promedio === null
+      ? '<span class="materia-chip estado-sininfo">S/I</span>'
+      : `<span class="materia-chip ${promedio < MIN_APROBATORIO ? 'estado-perdiendo' : 'estado-ok'}">${promedio.toFixed(2)}</span>`;
+
+    return `
+      <tr>
+        <td><strong>${item.nombre}</strong></td>
+        <td><span class="badge-pill badge-red">${item.perdiendoCount || 0}</span></td>
+        <td>${promedioHtml}</td>
+        ${celdas}
+      </tr>`;
   }).join('');
 
   return `
     <div class="coord-subsection">
+      <div class="coord-note" style="margin-bottom:10px">
+        Ordenado de caso crítico a caso menos crítico: primero mayor número de asignaturas por debajo de ${MIN_APROBATORIO}, luego materias sin información, luego menor promedio estudiantil.
+      </div>
       <div class="tabla-scroll">
         <table class="coord-table">
           <thead>
             <tr>
               <th>Estudiante</th>
+              <th>Asignaturas perdiendo</th>
+              <th>Promedio estudiantil</th>
               ${head}
             </tr>
           </thead>
@@ -1506,9 +1583,17 @@ function renderTablaMiGrupo(grupo, filasEstudiantes) {
 }
 
 function renderResumenMiGrupoCards(filasEstudiantes) {
-  const totalEstudiantes = filasEstudiantes.length;
-  const totalPerdiendo = filasEstudiantes.reduce((acc, item) => acc + (item.perdiendoCount || 0), 0);
-  const totalSinInfo = filasEstudiantes.reduce((acc, item) => acc + (item.sinInfoCount || 0), 0);
+  const filasOrdenadas = ordenarFilasMiGrupo(filasEstudiantes);
+  const totalEstudiantes = filasOrdenadas.length;
+  const totalPerdiendo = filasOrdenadas.reduce((acc, item) => acc + (item.perdiendoCount || 0), 0);
+  const totalSinInfo = filasOrdenadas.reduce((acc, item) => acc + (item.sinInfoCount || 0), 0);
+  const promedios = filasOrdenadas
+    .map(item => item.promedioEstudiantil ?? promedioEstudiantilMiGrupo(item))
+    .filter(v => v !== null && v !== undefined && !Number.isNaN(Number(v)));
+  const promedioGrupo = promedios.length
+    ? (promedios.reduce((acc, v) => acc + Number(v), 0) / promedios.length).toFixed(2)
+    : 'S/I';
+
   return `
     <div class="coord-summary-grid">
       <div class="coord-summary-card">
@@ -1523,6 +1608,10 @@ function renderResumenMiGrupoCards(filasEstudiantes) {
         <span class="coord-summary-num coord-amber">${totalSinInfo}</span>
         <span class="coord-summary-lbl">Asignaturas sin información</span>
       </div>
+      <div class="coord-summary-card">
+        <span class="coord-summary-num">${promedioGrupo}</span>
+        <span class="coord-summary-lbl">Promedio grupal</span>
+      </div>
     </div>
   `;
 }
@@ -1533,6 +1622,8 @@ async function renderMiGrupoPanel() {
     return;
   }
 
+  const tipoCorteSeleccionado = tipoCorteMiGrupoActual();
+
   $('topbar-title').textContent = currentPerfil?.rol === 'admin'
     ? 'Direcciones de grupo · Resumen general'
     : `Mi grupo · ${nombreGrupo(grupoDirectorActual())}`;
@@ -1542,10 +1633,15 @@ async function renderMiGrupoPanel() {
 
   setLoading('Cargando resumen de grupo...');
   try {
-    const ultimo = await obtenerUltimoCorteMitadPeriodo();
+    const ultimo = await obtenerUltimoCorteMitadPeriodo(tipoCorteSeleccionado);
     if (!ultimo) {
       clearLoading();
-      $('panel-grupo').innerHTML = `<div class="coord-empty">Aún no hay cortes generados desde Coordinación.</div>`;
+      $('panel-grupo').innerHTML = `
+        <div class="coord-wrap">
+          ${renderSelectorTipoCorteMiGrupo(tipoCorteSeleccionado)}
+          <div class="coord-empty">Aún no hay cortes generados para <strong>${etiquetaTipoCorte(tipoCorteSeleccionado)}</strong> desde Coordinación.</div>
+        </div>`;
+      inicializarSelectorMiGrupo();
       return;
     }
 
@@ -1555,7 +1651,7 @@ async function renderMiGrupoPanel() {
     if (currentPerfil?.rol === 'admin') {
       const directores = obtenerDirectoresConfigurados();
       const bloques = directores.map(item => {
-        const filas = (detalle.estudiantes || []).filter(est => est.grupo === item.grupo);
+        const filas = ordenarFilasMiGrupo((detalle.estudiantes || []).filter(est => est.grupo === item.grupo));
         return `
           <div class="coord-section">
             <div class="coord-section-head">
@@ -1563,11 +1659,12 @@ async function renderMiGrupoPanel() {
               <div class="coord-meta-inline">
                 <span><strong>Director:</strong> ${item.nombre}</span>
                 <span><strong>Grupo:</strong> ${item.grupo}</span>
+                <span><strong>Tipo:</strong> ${etiquetaTipoCorte(tipoCorteSeleccionado)}</span>
                 <span><strong>Corte:</strong> ${formatearFechaBogota(ultimo.corteOficialISO)}</span>
               </div>
             </div>
             ${renderResumenMiGrupoCards(filas)}
-            ${renderTablaMiGrupo(item.grupo, filas)}
+            ${renderTablaMiGrupo(item.grupo, filas, tipoCorteSeleccionado)}
           </div>`;
       }).join('');
 
@@ -1576,36 +1673,40 @@ async function renderMiGrupoPanel() {
           <div class="coord-hero">
             <div>
               <h2>Todas las direcciones de grupo</h2>
-              <p>Vista global de directores basada en el último corte generado por Coordinación. Cada bloque conserva el formato tipo matriz para facilitar la lectura por estudiante y asignatura.</p>
+              <p>Vista global de directores basada en el corte seleccionado. Permite comparar <strong>PAC</strong> para mitad de periodo y <strong>definitiva</strong> para corte final.</p>
             </div>
             <div class="coord-status ok">
-              <span class="coord-status-label">Último corte</span>
+              <span class="coord-status-label">${etiquetaTipoCorte(tipoCorteSeleccionado)}</span>
               <strong>${formatearFechaBogota(ultimo.generadoEn)}</strong>
             </div>
           </div>
+          ${renderSelectorTipoCorteMiGrupo(tipoCorteSeleccionado)}
           ${bloques || `<div class="coord-empty">No hay directores de grupo configurados actualmente.</div>`}
         </div>`;
+      inicializarSelectorMiGrupo();
       return;
     }
 
     const grupo = grupoDirectorActual();
-    const filas = (detalle.estudiantes || []).filter(item => item.grupo === grupo);
+    const filas = ordenarFilasMiGrupo((detalle.estudiantes || []).filter(item => item.grupo === grupo));
 
     $('panel-grupo').innerHTML = `
       <div class="coord-wrap">
         <div class="coord-hero">
           <div>
             <h2>Mi grupo · ${nombreGrupo(grupo)}</h2>
-            <p>Resumen del último corte generado por Coordinación para tu dirección de grupo.</p>
+            <p>Resumen del corte seleccionado para tu dirección de grupo. En mitad de periodo se usa <strong>PAC</strong>; en definitivo se usa la nota completa.</p>
           </div>
           <div class="coord-status ok">
-            <span class="coord-status-label">Corte oficial</span>
+            <span class="coord-status-label">${etiquetaTipoCorte(tipoCorteSeleccionado)}</span>
             <strong>${formatearFechaBogota(ultimo.corteOficialISO)}</strong>
           </div>
         </div>
+        ${renderSelectorTipoCorteMiGrupo(tipoCorteSeleccionado)}
         ${renderResumenMiGrupoCards(filas)}
-        ${renderTablaMiGrupo(grupo, filas)}
+        ${renderTablaMiGrupo(grupo, filas, tipoCorteSeleccionado)}
       </div>`;
+    inicializarSelectorMiGrupo();
   } catch (e) {
     console.error(e);
     clearLoading();
