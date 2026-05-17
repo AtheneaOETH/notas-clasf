@@ -1719,6 +1719,144 @@ function descargarReporteEstudianteMiGrupo(grupo, indice) {
   descargarArchivoMiGrupo(`reporte_${nombreArchivoSeguroMiGrupo(item.nombre)}_${nombreArchivoSeguroMiGrupo(ctx.grupoNombre)}.html`, html);
 }
 
+
+
+function cssBoletinPreventivoMiGrupo() {
+  return `
+    <style>
+      @page { size: letter portrait; margin: 0; }
+      body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #111; background: #fff; }
+      .boletin-page { position: relative; min-height: 279mm; padding: 28mm 13mm 28mm 13mm; box-sizing: border-box; page-break-after: always; overflow: hidden; }
+      .boletin-page:last-child { page-break-after: auto; }
+      .boletin-header { position: absolute; left: 0; right: 0; top: 0; height: 24mm; padding: 5mm 13mm 0 13mm; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; border-bottom: 3mm solid #2555a6; }
+      .boletin-logo { height: 17mm; width: auto; object-fit: contain; }
+      .boletin-title-block { display: flex; align-items: center; gap: 8px; }
+      .boletin-school { font-size: 10px; font-weight: 700; color: #1c4f9c; line-height: 1.05; text-transform: uppercase; }
+      .boletin-section-title { font-size: 12px; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0; letter-spacing: .2px; }
+      .boletin-info { font-size: 11px; font-weight: 700; line-height: 1.28; margin-bottom: 22px; }
+      .boletin-main-title { font-size: 14px; font-weight: 800; text-transform: uppercase; margin: 0 0 26px 0; }
+      .boletin-text { font-size: 12px; line-height: 1.65; text-align: justify; margin: 0 0 10px 0; }
+      .boletin-table { width: 100%; border-collapse: collapse; margin: 16px 0 70px 0; font-size: 11px; }
+      .boletin-table th { background: #2555a6; color: #fff; text-align: left; padding: 8px; border: 1px solid #2555a6; }
+      .boletin-table td { padding: 8px; border: 1px solid #c9c9c9; }
+      .boletin-table td.nota-baja { color: #b00020; font-weight: 800; }
+      .indicadores { margin-top: 4px; font-size: 12px; }
+      .indicador-item { margin: 10px 0; font-weight: 800; }
+      .indicador-valor { display: block; margin-top: 2px; font-weight: 800; }
+      .boletin-footer-text { font-size: 11px; line-height: 1.55; text-align: justify; margin-top: 8px; }
+      .boletin-footer-brand { position: absolute; right: 13mm; bottom: 14mm; text-align: right; font-size: 15px; }
+      .boletin-footer-brand small { display: block; font-size: 9px; margin-top: 2px; }
+      .boletin-wave { position: absolute; left: 0; right: 0; bottom: 0; height: 20mm; background: linear-gradient(135deg, transparent 0 12%, #1f2e62 12% 23%, #2555a6 23% 100%); }
+      .no-print { position: sticky; top: 0; z-index: 10; padding: 10px; background: #111; color: #fff; font-family: Arial, sans-serif; }
+      .no-print button { padding: 7px 12px; border: 0; border-radius: 4px; cursor: pointer; margin-right: 8px; }
+      @media print { .no-print { display: none; } body { background: #fff; } }
+    </style>`;
+}
+
+function separarGradoGrupoBoletinMiGrupo(grupoNombre) {
+  const limpio = String(grupoNombre || '').trim();
+  const m = limpio.match(/^(\d+)([A-Z])?$/i);
+  if (!m) return { grado: limpio, grupo: limpio };
+  return { grado: m[1], grupo: m[2] ? m[2].toUpperCase() : m[1] };
+}
+
+function obtenerDirectorGrupoBoletinMiGrupo(grupo) {
+  const director = Object.values(USUARIOS || {}).find(perfil => perfil && perfil.directorGrupo === grupo);
+  return director?.nombre || currentPerfil?.nombre || '';
+}
+
+function materiasReprobadasBoletinMiGrupo(item) {
+  return (item.materias || []).filter(m =>
+    m && m.estado !== 'sin_informacion' && m.nota !== null && m.nota !== undefined && !Number.isNaN(Number(m.nota)) && Number(m.nota) < MIN_APROBATORIO
+  ).sort((a, b) => Number(a.nota) - Number(b.nota));
+}
+
+function tablaMateriasBoletinMiGrupo(materias) {
+  if (!materias.length) {
+    return `<p class="boletin-text"><strong>Al momento del corte seleccionado, el estudiante no registra asignaturas en desempeño bajo.</strong></p>`;
+  }
+  return `<table class="boletin-table">
+    <thead><tr><th>Asignatura</th><th>Promedio registrado</th></tr></thead>
+    <tbody>${materias.map(m => `<tr><td>${htmlSeguroMiGrupo(m.materia)}</td><td class="nota-baja">${Number(m.nota).toFixed(2)}</td></tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function plantillaBoletinPreventivoEstudianteMiGrupo(ctx, item, incluirSalto = true) {
+  const materias = materiasReprobadasBoletinMiGrupo(item);
+  const promedio = item.promedioEstudiantil ?? promedioEstudiantilMiGrupo(item);
+  const partes = separarGradoGrupoBoletinMiGrupo(ctx.grupoNombre || item.grupo || ctx.grupo);
+  const director = obtenerDirectorGrupoBoletinMiGrupo(ctx.grupo);
+  const fecha = formatearFechaBogota(ctx.generado || new Date().toISOString());
+  return `
+    <section class="boletin-page${incluirSalto ? '' : ' no-break'}">
+      <div class="boletin-header">
+        <div class="boletin-title-block">
+          <img class="boletin-logo" src="${LOGO_COLEGIO}" alt="Colegio Los Ángeles San Fernando">
+          <div class="boletin-school">Colegio<br>Los Ángeles San Fernando</div>
+        </div>
+        <img class="boletin-logo" src="${LOGO_COLEGIO}" alt="Fundación Mercedes Herrera Mora de Tenorio">
+      </div>
+
+      <h2 class="boletin-section-title">Información del estudiante</h2>
+      <div class="boletin-info">
+        Estudiante: ${htmlSeguroMiGrupo(item.nombre)}<br>
+        Grado: ${htmlSeguroMiGrupo(partes.grado)} - ${htmlSeguroMiGrupo(partes.grupo)}<br>
+        Director de grupo: ${htmlSeguroMiGrupo(director)}
+      </div>
+
+      <h1 class="boletin-main-title">Reporte académico</h1>
+
+      <p class="boletin-text">En cumplimiento de lo dispuesto en el Artículo 19, literal d, del Manual de Convivencia del Colegio Los Ángeles San Fernando relacionado con la generación del preinforme de seguimiento académico una vez cumplida la primera mitad de cada periodo académico, la institución presenta el consolidado parcial del desempeño registrado por el estudiante con base en la información académica reportada y validada en la plataforma institucional al momento del cierre del presente corte.</p>
+
+      <p class="boletin-text">La información consignada en este informe corresponde exclusivamente a las valoraciones, actividades, evidencias y registros académicos incorporados en el sistema institucional dentro de los tiempos establecidos para el proceso de seguimiento académico correspondiente al corte indicado en el presente documento.</p>
+
+      <p class="boletin-text">De acuerdo con dicho consolidado, el estudiante registra desempeño bajo en las siguientes asignaturas:</p>
+
+      ${tablaMateriasBoletinMiGrupo(materias)}
+
+      <h2 class="boletin-section-title">Indicadores académicos</h2>
+      <div class="indicadores">
+        <div class="indicador-item">• &nbsp; ASIGNATURAS EN DESEMPEÑO BAJO<span class="indicador-valor">${materias.length}</span></div>
+        <div class="indicador-item">• &nbsp; PROMEDIO ACUMULADO<span class="indicador-valor">${promedio === null || promedio === undefined ? 'S/I' : Number(promedio).toFixed(2)}</span></div>
+      </div>
+
+      <p class="boletin-footer-text">El presente preinforme tiene carácter preventivo y corresponde al seguimiento académico parcial realizado durante el desarrollo del periodo, en concordancia con los criterios de seguimiento y evaluación establecidos en el Sistema Institucional de Evaluación de los Estudiantes (SIEE).</p>
+
+      <p class="boletin-footer-text">Las valoraciones aquí registradas no constituyen resultados definitivos del cierre académico y podrán presentar variaciones conforme al avance del proceso evaluativo, el desarrollo de las actividades académicas y la actualización de los registros en la plataforma institucional.</p>
+
+      <div class="boletin-footer-brand">Fundación Mercedes Herrera Mora de Tenorio<small>Sistema Institucional de Gestión Académica</small></div>
+      <div class="boletin-wave"></div>
+    </section>`;
+}
+
+function plantillaBoletinesPreventivosMiGrupo(titulo, cuerpo) {
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${htmlSeguroMiGrupo(titulo)}</title>${cssBoletinPreventivoMiGrupo()}</head><body>
+    <div class="no-print"><button onclick="window.print()">Imprimir / Guardar como PDF</button><button onclick="window.close()">Cerrar</button> ${htmlSeguroMiGrupo(titulo)}</div>
+    ${cuerpo}
+  </body></html>`;
+}
+
+function descargarBoletinesPreventivosMiGrupo(grupo) {
+  const ctx = window.__miGrupoReporteContextos?.[grupo];
+  if (!ctx) { toast?.('No hay datos de Mi Grupo para generar boletines', 'err'); return; }
+  const estudiantesCriticos = (ctx.filas || []).filter(item => materiasReprobadasBoletinMiGrupo(item).length > 0);
+  if (!estudiantesCriticos.length) { toast?.('No hay estudiantes con asignaturas en desempeño bajo para este corte', 'ok'); return; }
+  const cuerpo = estudiantesCriticos.map(item => plantillaBoletinPreventivoEstudianteMiGrupo(ctx, item)).join('');
+  const html = plantillaBoletinesPreventivosMiGrupo(`Boletines preventivos · ${ctx.grupoNombre} · ${ctx.tipoEtiqueta}`, cuerpo);
+  descargarArchivoMiGrupo(`boletines_preventivos_${nombreArchivoSeguroMiGrupo(ctx.grupoNombre)}_${nombreArchivoSeguroMiGrupo(ctx.tipoCorte)}.html`, html);
+}
+
+function descargarBoletinEstudianteMiGrupo(grupo, indice) {
+  const ctx = window.__miGrupoReporteContextos?.[grupo];
+  if (!ctx) { toast?.('No hay datos del grupo para generar boletín', 'err'); return; }
+  const item = ctx.filas[Number(indice)];
+  if (!item) { toast?.('No se encontró el estudiante seleccionado', 'err'); return; }
+  const materias = materiasReprobadasBoletinMiGrupo(item);
+  if (!materias.length) { toast?.('El estudiante no registra asignaturas en desempeño bajo para este corte', 'ok'); return; }
+  const html = plantillaBoletinesPreventivosMiGrupo(`Boletín preventivo · ${item.nombre}`, plantillaBoletinPreventivoEstudianteMiGrupo(ctx, item, false));
+  descargarArchivoMiGrupo(`boletin_preventivo_${nombreArchivoSeguroMiGrupo(item.nombre)}_${nombreArchivoSeguroMiGrupo(ctx.grupoNombre)}.html`, html);
+}
+
 function renderTablaMiGrupo(grupo, filasEstudiantes, tipoCorte = 'mitad_periodo_pac') {
   const filasOrdenadas = ordenarFilasMiGrupo(filasEstudiantes);
   const materias = Array.from(new Set(
@@ -1754,7 +1892,10 @@ function renderTablaMiGrupo(grupo, filasEstudiantes, tipoCorte = 'mitad_periodo_
         <td><span class="badge-pill badge-red">${item.perdiendoCount || 0}</span></td>
         <td>${promedioHtml}</td>
         ${celdas}
-        <td><button class="btn-secondary btn-sm" onclick="descargarReporteEstudianteMiGrupo('${grupo}', ${idx})">⬇️ Reporte</button></td>
+        <td>
+          <button class="btn-secondary btn-sm" onclick="descargarReporteEstudianteMiGrupo('${grupo}', ${idx})">⬇️ Reporte</button>
+          <button class="btn-secondary btn-sm" onclick="descargarBoletinEstudianteMiGrupo('${grupo}', ${idx})">📄 Boletín</button>
+        </td>
       </tr>`;
   }).join('');
 
@@ -1762,6 +1903,7 @@ function renderTablaMiGrupo(grupo, filasEstudiantes, tipoCorte = 'mitad_periodo_
     <div class="coord-subsection">
       <div class="coord-actions" style="margin-bottom:10px">
         <button class="btn-primary btn-sm" onclick="descargarConsolidadoMiGrupo('${grupo}')">⬇️ Descargar consolidado de notas</button>
+        <button class="btn-primary btn-sm" onclick="descargarBoletinesPreventivosMiGrupo('${grupo}')">📄 Boletines preventivos</button>
       </div>
       <div class="coord-note" style="margin-bottom:10px">
         Ordenado de caso crítico a caso menos crítico: primero mayor número de asignaturas por debajo de ${MIN_APROBATORIO}, luego materias sin información, luego menor promedio estudiantil.
