@@ -2633,25 +2633,65 @@ async function calcularEstadisticasEnVivo() {
   return { rankingMaterias, estudiantesAlerta, totalEstudiantes, totalPerdiendo, totalSinInfo, tipoCorte };
 }
 
+async function cargarEstadisticasEnVivo() {
+  const div = $('coord-live-analytics');
+  if (!div) return;
+  div.innerHTML = '<div class="coord-loading-msg"><span class="analytics-spinner"></span> Calculando estadísticas en vivo...</div>';
+  try {
+    const stats = await calcularEstadisticasEnVivo();
+    div.innerHTML = renderAnalyticsPanel(stats);
+    const btnRefresh = $('btn-refresh-analytics');
+    if (btnRefresh) btnRefresh.onclick = () => cargarEstadisticasEnVivo();
+  } catch (e) {
+    console.error('Error calculando estadísticas en vivo:', e);
+    div.innerHTML = '<div class="coord-empty">No se pudieron calcular las estadísticas en vivo. Intenta de nuevo.</div>';
+  }
+}
+
+
 function renderAnalyticsPanel(stats) {
   const { rankingMaterias, estudiantesAlerta, totalEstudiantes, totalPerdiendo, totalSinInfo, tipoCorte } = stats;
 
   const rankingHtml = rankingMaterias.length ? rankingMaterias.map((m, i) => {
     const criticos = m.perdiendo + m.sinInformacion;
     const pct = m.total ? Math.round(criticos / m.total * 100) : 0;
-    return `<div class="analytics-rank-row">
-      <span class="analytics-rank-pos">${i + 1}</span>
-      <div class="analytics-rank-info">
-        <strong>${m.materia}</strong>
-        <span class="analytics-rank-meta">${m.grupos.length} grupo${m.grupos.length !== 1 ? 's' : ''} · ${m.total} estudiantes</span>
+    const widthPct = Math.max(2, Math.min(100, pct));
+
+    return `<div style="
+      display:grid;
+      grid-template-columns:32px minmax(220px,1fr) 130px 170px;
+      align-items:center;
+      gap:12px;
+      padding:11px 14px;
+      background:var(--bg2);
+      border:1px solid var(--border);
+      border-radius:10px;
+      margin-bottom:8px;
+      width:100%;
+      box-sizing:border-box;
+    ">
+      <span style="font-size:13px;font-weight:800;color:var(--text2);text-align:center;">${i + 1}</span>
+
+      <div style="min-width:0;">
+        <strong style="display:block;font-size:13px;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.materia}</strong>
+        <span style="display:block;font-size:11px;color:var(--text2);">${m.grupos.length} grupo${m.grupos.length !== 1 ? 's' : ''} · ${m.total} estudiantes</span>
       </div>
-      <div class="analytics-rank-badges">
+
+      <div style="display:flex;gap:5px;justify-content:flex-end;align-items:center;">
         <span class="badge-pill badge-red" title="Perdiendo">${m.perdiendo}</span>
         <span class="badge-pill badge-amber" title="Sin información">${m.sinInformacion}</span>
       </div>
-      <div class="analytics-rank-bar-wrap">
-        <div class="analytics-rank-bar" style="width:${pct}%"></div>
-        <span class="analytics-rank-pct">${pct}%</span>
+
+      <div style="
+        position:relative;
+        height:18px;
+        background:var(--border);
+        border-radius:6px;
+        overflow:hidden;
+        min-width:120px;
+      ">
+        <div style="height:100%;width:${widthPct}%;background:var(--red,#e55);opacity:.55;border-radius:6px;"></div>
+        <span style="position:absolute;right:6px;top:0;font-size:10px;font-weight:700;color:var(--text1);line-height:18px;">${pct}%</span>
       </div>
     </div>`;
   }).join('') : '<div class="coord-empty">No hay datos suficientes aún.</div>';
@@ -2701,7 +2741,7 @@ function renderAnalyticsPanel(stats) {
       <div class="coord-subsection">
         <h4>Asignaturas más complejas</h4>
         <p class="coord-note">Ranking en tiempo real. Las que concentran más estudiantes perdiendo o sin información son las que requieren intervención inmediata.</p>
-        <div class="analytics-ranking">${rankingHtml}</div>
+        <div style="display:flex;flex-direction:column;gap:0;width:100%;overflow-x:auto;">${rankingHtml}</div>
       </div>
 
       <div class="coord-subsection">
@@ -2722,20 +2762,6 @@ function renderAnalyticsPanel(stats) {
   `;
 }
 
-async function cargarEstadisticasEnVivo() {
-  const div = $('coord-live-analytics');
-  if (!div) return;
-  div.innerHTML = '<div class="coord-loading-msg"><span class="analytics-spinner"></span> Calculando estadísticas en vivo...</div>';
-  try {
-    const stats = await calcularEstadisticasEnVivo();
-    div.innerHTML = renderAnalyticsPanel(stats);
-    const btnRefresh = $('btn-refresh-analytics');
-    if (btnRefresh) btnRefresh.onclick = () => cargarEstadisticasEnVivo();
-  } catch (e) {
-    console.error('Error calculando estadísticas en vivo:', e);
-    div.innerHTML = '<div class="coord-empty">No se pudieron calcular las estadísticas en vivo. Intenta de nuevo.</div>';
-  }
-}
 // ── FIN BLOQUE RECUPERADO DESDE V1.59 ───────────────────────────────────────────────
 
 async function renderCoordinationPanel(forzarRefresco = false) {
