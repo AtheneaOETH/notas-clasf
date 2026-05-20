@@ -1446,6 +1446,47 @@ function renderResumenCorte(corte, detalle) {
       </div>
 
       <div class="coord-subsection">
+        <h4>Complejidad por asignatura</h4>
+        <p class="coord-note">Ordenadas de mayor a menor número de casos críticos. Identifica dónde intervenir primero.</p>
+        <div class="analytics-ranking">
+          ${(() => {
+            const rankMap = docentes.reduce((acc, d) => {
+              const k = d.materia;
+              if (!acc[k]) acc[k] = { materia: k, perdiendo: 0, sinInformacion: 0, total: 0, grupos: [] };
+              acc[k].perdiendo += d.perdiendo || 0;
+              acc[k].sinInformacion += d.sinInformacion || 0;
+              acc[k].total += d.totalEstudiantes || 0;
+              acc[k].grupos.push(d.grupo);
+              return acc;
+            }, {});
+            const sorted = Object.values(rankMap).sort((a, b) =>
+              (b.perdiendo * 2 + b.sinInformacion) - (a.perdiendo * 2 + a.sinInformacion)
+            );
+            if (!sorted.length) return '<div class="coord-empty">No hay datos de asignaturas en este corte.</div>';
+            return sorted.map((m, i) => {
+              const criticos = m.perdiendo + m.sinInformacion;
+              const pct = m.total ? Math.round(criticos / m.total * 100) : 0;
+              return `<div class="analytics-rank-row">
+                <span class="analytics-rank-pos">${i + 1}</span>
+                <div class="analytics-rank-info">
+                  <strong>${m.materia}</strong>
+                  <span class="analytics-rank-meta">${m.grupos.length} grupo${m.grupos.length !== 1 ? 's' : ''} · ${m.total} est.</span>
+                </div>
+                <div class="analytics-rank-badges">
+                  <span class="badge-pill badge-red" title="Perdiendo">${m.perdiendo}</span>
+                  <span class="badge-pill badge-amber" title="Sin información">${m.sinInformacion}</span>
+                </div>
+                <div class="analytics-rank-bar-wrap">
+                  <div class="analytics-rank-bar" style="width:${pct}%"></div>
+                  <span class="analytics-rank-pct">${pct}%</span>
+                </div>
+              </div>`;
+            }).join('');
+          })()}
+        </div>
+      </div>
+
+      <div class="coord-subsection">
         <h4>Seguimiento de estudiantes</h4>
         <div class="tabla-scroll">
           <table class="coord-table">
@@ -1486,6 +1527,181 @@ function renderResumenCorte(corte, detalle) {
   `;
 }
 
+
+async function calcularEstadisticasEnVivo() {
+  const catalogo = catalogoDocenteMateriaGrupo();
+  const materiasMap = {};
+  const estudiantesMap = {};
+  const tipoCorte = tipoCorteCoordinacionActual();
+
+  await Promise.all(catalogo.map(async ({ materia, grupo }) => {
+    const [config, notas] = await Promise.all([
+      cargarConfig(grupo, materia),
+      cargarNotasGrupo(grupo, materia)
+    ]);
+    const estudiantesGrupo = ESTUDIANTES[grupo] || [];
+
+    if (!materiasMap[materia]) {
+      materiasMap[materia] = { materia, perdiendo: 0, sinInformacion: 0, total: 0, grupos: [] };
+    }
+    materiasMap[materia].total += estudiantesGrupo.length;
+    materiasMap[materia].grupos.push(grupo);
+
+    estudiantesGrupo.forEach(nombre => {
+      const notasEst = notas[nombre] || {};
+      const cantidadNotas = contarNotasReportadas(notasEst, config);
+      const tieneInfo = cantidadNotas >= 2;
+      const notaRef = tieneInfo ? notaReferenciaReporte(notasEst, config, tipoCorte) : null;
+      const estado = !tieneInfo
+        ? 'sin_informacion'
+        : (notaRef !== null && notaRef < MIN_APROBATORIO ? 'perdiendo' : 'ok');
+
+      if (estado === 'perdiendo') materiasMap[materia].perdiendo++;
+      if (estado === 'sin_informacion') materiasMap[materia].sinInformacion++;
+
+      const key = `${grupo}::${nombre}`;
+      if (!estudiantesMap[key]) {
+        estudiantesMap[key] = { nombre, grupo, grupoNombre: nombreGrupo(grupo), materias: [] };
+      }
+      estudiantesMap[key].materias.push({
+        materia,
+        nota: notaRef !== null ? Number(notaRef.toFixed(2)) : null,
+        estado
+      });
+    });
+  }));
+
+  const rankingMaterias = Object.values(materiasMap)
+    .map(m => ({
+      ...m,
+      pctComplejidad: m.total ? Number(((m.perdiendo + m.sinInformacion) / m.total * 100).toFixed(1)) : 0
+    }))
+    .sort((a, b) => (b.perdiendo * 2 + b.sinInformacion) - (a.perdiendo * 2 + a.sinInformacion));
+
+  const estudiantesAlerta = Object.values(estudiantesMap)
+    .map(e => ({
+      ...e,
+      perdiendoCount: e.materias.filter(m => m.estado === 'perdiendo').length,
+      sinInfoCount: e.materias.filter(m => m.estado === 'sin_informacion').length
+    }))
+    .filter(e => e.perdiendoCount > 0 || e.sinInfoCount > 0)
+    .sort((a, b) => {
+      const diff = (b.perdiendoCount * 2 + b.sinInfoCount) - (a.perdiendoCount * 2 + a.sinInfoCount);
+      if (diff !== 0) return diff;
+      const gi = GRUPOS_ORDEN.indexOf(a.grupo) - GRUPOS_ORDEN.indexOf(b.grupo);
+      return gi !== 0 ? gi : a.nombre.localeCompare(b.nombre, 'es');
+    });
+
+  const totalEstudiantes = Object.values(ESTUDIANTES).reduce((s, l) => s + (Array.isArray(l) ? l.length : 0), 0);
+  const totalPerdiendo = estudiantesAlerta.reduce((s, e) => s + e.perdiendoCount, 0);
+  const totalSinInfo = estudiantesAlerta.reduce((s, e) => s + e.sinInfoCount, 0);
+
+  return { rankingMaterias, estudiantesAlerta, totalEstudiantes, totalPerdiendo, totalSinInfo, tipoCorte };
+}
+
+function renderAnalyticsPanel(stats) {
+  const { rankingMaterias, estudiantesAlerta, totalEstudiantes, totalPerdiendo, totalSinInfo, tipoCorte } = stats;
+
+  const rankingHtml = rankingMaterias.length ? rankingMaterias.map((m, i) => {
+    const criticos = m.perdiendo + m.sinInformacion;
+    const pct = m.total ? Math.round(criticos / m.total * 100) : 0;
+    return `<div class="analytics-rank-row">
+      <span class="analytics-rank-pos">${i + 1}</span>
+      <div class="analytics-rank-info">
+        <strong>${m.materia}</strong>
+        <span class="analytics-rank-meta">${m.grupos.length} grupo${m.grupos.length !== 1 ? 's' : ''} · ${m.total} estudiantes</span>
+      </div>
+      <div class="analytics-rank-badges">
+        <span class="badge-pill badge-red" title="Perdiendo">${m.perdiendo}</span>
+        <span class="badge-pill badge-amber" title="Sin información">${m.sinInformacion}</span>
+      </div>
+      <div class="analytics-rank-bar-wrap">
+        <div class="analytics-rank-bar" style="width:${pct}%"></div>
+        <span class="analytics-rank-pct">${pct}%</span>
+      </div>
+    </div>`;
+  }).join('') : '<div class="coord-empty">No hay datos suficientes aún.</div>';
+
+  const alertaHtml = estudiantesAlerta.slice(0, 20).map(e => `
+    <tr>
+      <td>${e.nombre}</td>
+      <td>${e.grupoNombre || e.grupo}</td>
+      <td><span class="badge-pill badge-red">${e.perdiendoCount}</span></td>
+      <td><span class="badge-pill badge-amber">${e.sinInfoCount}</span></td>
+      <td class="td-chips">${e.materias.filter(m => m.estado !== 'ok').map(m =>
+        `<span class="materia-chip ${colorEstadoReporte(m.estado)}">${m.materia}${m.nota !== null ? ' · ' + m.nota : ''}</span>`
+      ).join('')}</td>
+    </tr>
+  `).join('') || `<tr><td colspan="5" class="td-empty">No hay estudiantes en alerta en este momento.</td></tr>`;
+
+  return `
+    <div class="coord-section analytics-section">
+      <div class="coord-section-head">
+        <h3>Estadísticas en vivo</h3>
+        <div class="coord-meta-inline">
+          <span class="analytics-live-badge">EN VIVO</span>
+          <span>Criterio: <strong>${tipoCorte === 'definitivo' ? 'Definitiva' : 'PAC'}</strong></span>
+          <button class="btn-secondary btn-sm" id="btn-refresh-analytics">↺ Actualizar</button>
+        </div>
+      </div>
+
+      <div class="coord-summary-grid">
+        <div class="coord-summary-card">
+          <span class="coord-summary-num">${totalEstudiantes}</span>
+          <span class="coord-summary-lbl">Estudiantes en plataforma</span>
+        </div>
+        <div class="coord-summary-card">
+          <span class="coord-summary-num coord-red">${estudiantesAlerta.length}</span>
+          <span class="coord-summary-lbl">Estudiantes con alerta</span>
+        </div>
+        <div class="coord-summary-card">
+          <span class="coord-summary-num coord-red">${totalPerdiendo}</span>
+          <span class="coord-summary-lbl">Asignaturas perdiendo</span>
+        </div>
+        <div class="coord-summary-card">
+          <span class="coord-summary-num coord-amber">${totalSinInfo}</span>
+          <span class="coord-summary-lbl">Sin información</span>
+        </div>
+      </div>
+
+      <div class="coord-subsection">
+        <h4>Asignaturas más complejas</h4>
+        <p class="coord-note">Ranking en tiempo real. Las que concentran más estudiantes perdiendo o sin información son las que requieren intervención inmediata.</p>
+        <div class="analytics-ranking">${rankingHtml}</div>
+      </div>
+
+      <div class="coord-subsection">
+        <h4>Estudiantes en alerta <span class="badge-pill badge-red">${estudiantesAlerta.length}</span></h4>
+        ${estudiantesAlerta.length > 20 ? `<p class="coord-note">Mostrando los 20 casos más críticos de ${estudiantesAlerta.length} en total.</p>` : ''}
+        <div class="tabla-scroll">
+          <table class="coord-table">
+            <thead>
+              <tr>
+                <th>Estudiante</th><th>Grupo</th><th>Perdiendo</th><th>Sin información</th><th>Asignaturas</th>
+              </tr>
+            </thead>
+            <tbody>${alertaHtml}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function cargarEstadisticasEnVivo() {
+  const div = $('coord-live-analytics');
+  if (!div) return;
+  div.innerHTML = '<div class="coord-loading-msg"><span class="analytics-spinner"></span> Calculando estadísticas en vivo...</div>';
+  try {
+    const stats = await calcularEstadisticasEnVivo();
+    div.innerHTML = renderAnalyticsPanel(stats);
+    const btnRefresh = $('btn-refresh-analytics');
+    if (btnRefresh) btnRefresh.onclick = () => cargarEstadisticasEnVivo();
+  } catch (e) {
+    console.error('Error calculando estadísticas en vivo:', e);
+    div.innerHTML = '<div class="coord-empty">No se pudieron calcular las estadísticas en vivo. Intenta de nuevo.</div>';
+  }
+}
 
 function construirMapaMateriasDeDirector(filaEstudiante) {
   const mapa = {};
@@ -1662,7 +1878,7 @@ function plantillaReporteMiGrupo(titulo, subtitulo, cuerpo) {
       </div>
     </div>
     ${cuerpo}
-    <div class="footer">Reporte generado desde Athenea SIGA - A division of The Mirai Company. Puedes abrir este archivo e imprimirlo o guardarlo como PDF.</div>
+    <div class="footer">Reporte generado desde Athenea SIGA. Un producto de The Mirai Company. Puedes abrir este archivo e imprimirlo o guardarlo como PDF.</div>
   </body></html>`;
 }
 
@@ -1893,42 +2109,7 @@ function cssBoletinPreventivoMiGrupo() {
       .boletin-table td {
         border: 1px solid #cfd6e4;
         padding: 2.5mm 3mm;
-        vertical-align: top;
-      }
-
-      .boletin-table-causas th:nth-child(1),
-      .boletin-table-causas td:nth-child(1) {
-        width: 24%;
-      }
-
-      .boletin-table-causas th:nth-child(2),
-      .boletin-table-causas td:nth-child(2) {
-        width: 18%;
-      }
-
-      .boletin-table-causas th:nth-child(3),
-      .boletin-table-causas td:nth-child(3) {
-        width: 58%;
-      }
-
-      .factores-lista {
-        margin: 0;
-        padding-left: 16px;
-      }
-
-      .factores-lista li {
-        margin: 0 0 2.2mm 0;
-        line-height: 1.25;
-      }
-
-      .alerta-aus {
-        color: #1f4fa3;
-        font-weight: 800;
-      }
-
-      .factor-sin-detalle {
-        color: #555;
-        font-style: italic;
+        vertical-align: middle;
       }
 
       .boletin-table tbody tr:nth-child(even) td {
@@ -2039,114 +2220,18 @@ function materiasReprobadasBoletinMiGrupo(item) {
   ).sort((a, b) => Number(a.nota) - Number(b.nota));
 }
 
-
-
-async function detalleCausasAsignaturaBoletinMiGrupo(item, materiaRegistro) {
-  const detalle = {
-    materia: materiaRegistro.materia,
-    nota: materiaRegistro.nota,
-    actividadesBajas: [],
-    ausCount: 0,
-    altoAusentismo: false
-  };
-
-  try {
-    const [config, notasGrupo] = await Promise.all([
-      cargarConfig(item.grupo, materiaRegistro.materia),
-      cargarNotasGrupo(item.grupo, materiaRegistro.materia)
-    ]);
-
-    const notasEstudiante = notasGrupo?.[item.nombre] || {};
-    const actividades = Array.isArray(config?.actividades) ? config.actividades : [];
-
-    actividades.forEach(act => {
-      const raw = notasEstudiante?.[act.letra];
-
-      if (raw === null || raw === undefined || String(raw).trim() === '') return;
-
-      const texto = String(raw).trim().toUpperCase();
-
-      // No se listan AUS individualmente. Solo se cuentan.
-      if (texto === 'AUS') {
-        detalle.ausCount++;
-        return;
-      }
-
-      const valor = valorNumerico(raw);
-
-      if (valor !== null && !Number.isNaN(Number(valor)) && Number(valor) < MIN_APROBATORIO) {
-        detalle.actividadesBajas.push({
-          letra: act.letra || '',
-          nombre: act.nombre || act.titulo || act.descripcion || `Actividad ${act.letra || ''}`,
-          nota: Number(valor)
-        });
-      }
-    });
-
-    detalle.altoAusentismo = detalle.ausCount >= 3;
-  } catch (e) {
-    console.error('No se pudo cargar detalle de causas para boletín:', item?.nombre, materiaRegistro?.materia, e);
-  }
-
-  return detalle;
-}
-
-async function materiasReprobadasConCausasBoletinMiGrupo(item) {
-  const materias = materiasReprobadasBoletinMiGrupo(item);
-  const detalles = await Promise.all(
-    materias.map(m => detalleCausasAsignaturaBoletinMiGrupo(item, m))
-  );
-
-  return detalles.sort((a, b) => Number(a.nota) - Number(b.nota));
-}
-
-function renderFactoresCausaBoletinMiGrupo(detalle) {
-  const actividadesHtml = (detalle.actividadesBajas || []).map(act => `
-    <li>
-      <strong>${htmlSeguroMiGrupo(act.letra)})</strong>
-      ${htmlSeguroMiGrupo(act.nombre)}:
-      <span class="nota-baja">${Number(act.nota).toFixed(2)}</span>
-    </li>
-  `).join('');
-
-  const ausHtml = detalle.altoAusentismo
-    ? `<li class="alerta-aus">Se evidencia alto ausentismo académico en esta asignatura.</li>`
-    : '';
-
-  if (!actividadesHtml && !ausHtml) {
-    return `<span class="factor-sin-detalle">No se registran actividades individuales inferiores a ${MIN_APROBATORIO}; revisar ponderación y acumulado de la asignatura.</span>`;
-  }
-
-  return `<ul class="factores-lista">${actividadesHtml}${ausHtml}</ul>`;
-}
-
-function tablaMateriasBoletinMiGrupo(materiasDetalle) {
-  if (!materiasDetalle.length) {
+function tablaMateriasBoletinMiGrupo(materias) {
+  if (!materias.length) {
     return `<p class="boletin-text"><strong>Al momento del corte seleccionado, el estudiante no registra asignaturas en desempeño bajo.</strong></p>`;
   }
-
-  return `<table class="boletin-table boletin-table-causas">
-    <thead>
-      <tr>
-        <th>Asignatura</th>
-        <th>Promedio registrado</th>
-        <th>Factores asociados al bajo desempeño</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${materiasDetalle.map(m => `
-        <tr>
-          <td>${htmlSeguroMiGrupo(m.materia)}</td>
-          <td class="nota-baja">${Number(m.nota).toFixed(2)}</td>
-          <td>${renderFactoresCausaBoletinMiGrupo(m)}</td>
-        </tr>
-      `).join('')}
-    </tbody>
+  return `<table class="boletin-table">
+    <thead><tr><th>Asignatura</th><th>Promedio registrado</th></tr></thead>
+    <tbody>${materias.map(m => `<tr><td>${htmlSeguroMiGrupo(m.materia)}</td><td class="nota-baja">${Number(m.nota).toFixed(2)}</td></tr>`).join('')}</tbody>
   </table>`;
 }
 
-async function plantillaBoletinPreventivoEstudianteMiGrupo(ctx, item, incluirSalto = true) {
-  const materiasDetalle = await materiasReprobadasConCausasBoletinMiGrupo(item);
+function plantillaBoletinPreventivoEstudianteMiGrupo(ctx, item, incluirSalto = true) {
+  const materias = materiasReprobadasBoletinMiGrupo(item);
   const promedio = item.promedioEstudiantil ?? promedioEstudiantilMiGrupo(item);
   const partes = separarGradoGrupoBoletinMiGrupo(ctx.grupoNombre || item.grupo || ctx.grupo);
   const director = obtenerDirectorGrupoBoletinMiGrupo(ctx.grupo);
@@ -2192,14 +2277,14 @@ async function plantillaBoletinPreventivoEstudianteMiGrupo(ctx, item, incluirSal
           De acuerdo con dicho consolidado, el estudiante registra desempeño bajo en las siguientes asignaturas:
         </p>
 
-        ${tablaMateriasBoletinMiGrupo(materiasDetalle)}
+        ${tablaMateriasBoletinMiGrupo(materias)}
 
         <h2 class="boletin-section-title">Indicadores académicos</h2>
 
         <div class="indicadores">
           <div class="indicador-card">
             <div class="indicador-label">Asignaturas en desempeño bajo</div>
-            <span class="indicador-valor">${materiasDetalle.length}</span>
+            <span class="indicador-valor">${materias.length}</span>
           </div>
 
           <div class="indicador-card">
@@ -2228,47 +2313,25 @@ function plantillaBoletinesPreventivosMiGrupo(titulo, cuerpo) {
   </body></html>`;
 }
 
-async function descargarBoletinesPreventivosMiGrupo(grupo) {
+function descargarBoletinesPreventivosMiGrupo(grupo) {
   const ctx = window.__miGrupoReporteContextos?.[grupo];
   if (!ctx) { toast?.('No hay datos de Mi Grupo para generar boletines', 'err'); return; }
   const estudiantesCriticos = (ctx.filas || []).filter(item => materiasReprobadasBoletinMiGrupo(item).length > 0);
   if (!estudiantesCriticos.length) { toast?.('No hay estudiantes con asignaturas en desempeño bajo para este corte', 'ok'); return; }
-
-  try {
-    setLoading?.('Generando boletines preventivos...');
-    const paginas = await Promise.all(
-      estudiantesCriticos.map(item => plantillaBoletinPreventivoEstudianteMiGrupo(ctx, item))
-    );
-    const cuerpo = paginas.join('');
-    const html = plantillaBoletinesPreventivosMiGrupo(`Boletines preventivos · ${ctx.grupoNombre} · ${ctx.tipoEtiqueta}`, cuerpo);
-    descargarArchivoMiGrupo(`boletines_preventivos_${nombreArchivoSeguroMiGrupo(ctx.grupoNombre)}_${nombreArchivoSeguroMiGrupo(ctx.tipoCorte)}.html`, html);
-  } catch (e) {
-    console.error(e);
-    toast?.('No se pudieron generar los boletines preventivos', 'err');
-  } finally {
-    clearLoading?.();
-  }
+  const cuerpo = estudiantesCriticos.map(item => plantillaBoletinPreventivoEstudianteMiGrupo(ctx, item)).join('');
+  const html = plantillaBoletinesPreventivosMiGrupo(`Boletines preventivos · ${ctx.grupoNombre} · ${ctx.tipoEtiqueta}`, cuerpo);
+  descargarArchivoMiGrupo(`boletines_preventivos_${nombreArchivoSeguroMiGrupo(ctx.grupoNombre)}_${nombreArchivoSeguroMiGrupo(ctx.tipoCorte)}.html`, html);
 }
 
-async function descargarBoletinEstudianteMiGrupo(grupo, indice) {
+function descargarBoletinEstudianteMiGrupo(grupo, indice) {
   const ctx = window.__miGrupoReporteContextos?.[grupo];
   if (!ctx) { toast?.('No hay datos del grupo para generar boletín', 'err'); return; }
   const item = ctx.filas[Number(indice)];
   if (!item) { toast?.('No se encontró el estudiante seleccionado', 'err'); return; }
   const materias = materiasReprobadasBoletinMiGrupo(item);
   if (!materias.length) { toast?.('El estudiante no registra asignaturas en desempeño bajo para este corte', 'ok'); return; }
-
-  try {
-    setLoading?.('Generando boletín preventivo...');
-    const cuerpo = await plantillaBoletinPreventivoEstudianteMiGrupo(ctx, item, false);
-    const html = plantillaBoletinesPreventivosMiGrupo(`Boletín preventivo · ${item.nombre}`, cuerpo);
-    descargarArchivoMiGrupo(`boletin_preventivo_${nombreArchivoSeguroMiGrupo(item.nombre)}_${nombreArchivoSeguroMiGrupo(ctx.grupoNombre)}.html`, html);
-  } catch (e) {
-    console.error(e);
-    toast?.('No se pudo generar el boletín preventivo', 'err');
-  } finally {
-    clearLoading?.();
-  }
+  const html = plantillaBoletinesPreventivosMiGrupo(`Boletín preventivo · ${item.nombre}`, plantillaBoletinPreventivoEstudianteMiGrupo(ctx, item, false));
+  descargarArchivoMiGrupo(`boletin_preventivo_${nombreArchivoSeguroMiGrupo(item.nombre)}_${nombreArchivoSeguroMiGrupo(ctx.grupoNombre)}.html`, html);
 }
 
 function renderTablaMiGrupo(grupo, filasEstudiantes, tipoCorte = 'mitad_periodo_pac') {
@@ -2520,6 +2583,8 @@ async function renderCoordinationPanel(forzarRefresco = false) {
 
         ${renderDashboardCoordinacion(metricasDashboard)}
 
+        <div id="coord-live-analytics"><div class="coord-loading-msg"><span class="analytics-spinner"></span> Calculando estadísticas en vivo...</div></div>
+
         <div class="coord-grid">
           <div class="coord-card">
             <h3>Programación del corte</h3>
@@ -2557,6 +2622,8 @@ async function renderCoordinationPanel(forzarRefresco = false) {
         `}
       </div>
     `;
+
+    cargarEstadisticasEnVivo();
 
     $('coord-tipo-corte').onchange = async () => {
       localStorage.setItem('coordTipoCorte', $('coord-tipo-corte').value);
@@ -2693,7 +2760,7 @@ function renderApp(user) {
             <img src="${LOGO_MIRAI}" alt="Mirai Academic" class="sidebar-mirai-logo">
             <div class="sidebar-brand-text">
               <div class="sidebar-brand-name">Mirai Academic</div>
-              <div class="sidebar-brand-sub">Sistema Integral de Gestión Academica</div>
+              <div class="sidebar-brand-sub">Sistema de Notas</div>
             </div>
           </div>
           <button class="sidebar-toggle" id="sidebar-close">✕</button>
@@ -4104,6 +4171,89 @@ html, body { height: 100%; background: var(--bg); color: var(--text); overflow: 
   .coord-hero {
     flex-direction: column;
   }
+}
+
+/* ── ANALYTICS EN VIVO ──────────────────────────────────────────────────── */
+.analytics-section { border-left: 3px solid var(--accent); }
+.analytics-live-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  vertical-align: middle;
+}
+.analytics-spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.coord-loading-msg {
+  padding: 24px 20px;
+  color: var(--text2);
+  font-size: 13px;
+}
+.analytics-ranking { display: flex; flex-direction: column; gap: 8px; }
+.analytics-rank-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto 140px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg2);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.analytics-rank-pos {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text2);
+  text-align: center;
+}
+.analytics-rank-info { min-width: 0; }
+.analytics-rank-info strong { display: block; font-size: 13px; color: var(--text1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.analytics-rank-meta { font-size: 11px; color: var(--text2); }
+.analytics-rank-badges { display: flex; gap: 4px; justify-content: flex-end; }
+.analytics-rank-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  height: 18px;
+  position: relative;
+}
+.analytics-rank-bar {
+  height: 100%;
+  background: var(--red, #e55);
+  opacity: 0.55;
+  border-radius: 6px;
+  min-width: 2px;
+  transition: width 0.4s ease;
+}
+.analytics-rank-pct {
+  position: absolute;
+  right: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text1);
+  line-height: 18px;
+}
+.td-chips { max-width: 340px; }
+.td-chips .materia-chip { display: inline-block; margin: 2px 2px; }
+@media (max-width: 700px) {
+  .analytics-rank-row { grid-template-columns: 24px 1fr auto; }
+  .analytics-rank-bar-wrap { display: none; }
 }
 
 </style>
