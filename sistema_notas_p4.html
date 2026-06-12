@@ -2365,6 +2365,185 @@ async function descargarBoletinEstudianteMiGrupo(grupo, indice) {
   }
 }
 
+
+// ── RECUPERACIÓN ACADÉMICA V1.62.1 TEMP · CIERRE 2026 ──────────────────────
+const FECHAS_RECUPERACION_TEMP = '17, 18 y 19 de junio de 2026';
+const FECHA_JORNADA_PEDAGOGICA_TEMP = '12 de junio de 2026';
+
+function materiasPendientesRecuperacionMiGrupo(item) {
+  return materiasReprobadasBoletinMiGrupo(item);
+}
+
+function tablaMateriasRecuperacionMiGrupo(materias) {
+  const filas = (materias || []).map(m => `
+    <tr>
+      <td>${htmlSeguroMiGrupo(m.materia || '')}</td>
+      <td class="nota-baja">${textoNotaReporteMiGrupo(m)}</td>
+    </tr>`).join('');
+
+  return `
+    <table class="boletin-table recuperacion-table">
+      <thead>
+        <tr>
+          <th>Área o Asignatura</th>
+          <th>Desempeño</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filas || `<tr><td colspan="2">No registra asignaturas pendientes de aprobación.</td></tr>`}
+      </tbody>
+    </table>`;
+}
+
+function plantillaComunicadoRecuperacionEstudianteMiGrupo(ctx, item, incluirSalto = true) {
+  const materiasDetalle = materiasPendientesRecuperacionMiGrupo(item);
+  const partes = separarGradoGrupoBoletinMiGrupo(ctx.grupoNombre || item.grupo || ctx.grupo);
+
+  return `
+    <section class="boletin-page${incluirSalto ? '' : ' no-break'}">
+      <div class="boletin-print-inner">
+
+        <header class="boletin-header">
+          <div class="boletin-logo-wrap">
+            <img class="boletin-logo" src="${LOGO_COLEGIO}" alt="Colegio Los Ángeles San Fernando">
+            <div class="boletin-school">Colegio<br>Los Ángeles<br>San Fernando</div>
+          </div>
+
+          <div class="boletin-header-title">
+            <div class="institucion">Comunicado oficial a padres de familia y acudientes</div>
+            <div class="reporte">Jornada de Recuperación Académica</div>
+          </div>
+
+          <div class="boletin-fundacion">
+            <img class="boletin-logo-fundacion" src="${typeof LOGO_FUNDACION !== 'undefined' ? LOGO_FUNDACION : LOGO_COLEGIO}" alt="Fundación Mercedes Herrera Mora de Tenorio">
+          </div>
+        </header>
+
+        <div class="boletin-acta-title">
+          <strong>COLEGIO LOS ÁNGELES SAN FERNANDO</strong><br>
+          CONSEJO ACADÉMICO Y DE EVALUACIÓN Y PROMOCIÓN
+        </div>
+
+        <h2 class="boletin-section-title">Comunicado oficial</h2>
+
+        <p class="boletin-text">
+          Respetado(a) padre, madre de familia y/o acudiente:
+        </p>
+
+        <p class="boletin-text">
+          El Consejo Académico y de Evaluación y Promoción del Colegio Los Ángeles San Fernando, en ejercicio de las funciones que le confieren las disposiciones institucionales y luego de la revisión integral de los resultados académicos realizada durante la Jornada Pedagógica llevada a cabo el día <strong>${FECHA_JORNADA_PEDAGOGICA_TEMP}</strong>, se permite informar que el(la) estudiante <strong>${htmlSeguroMiGrupo(item.nombre)}</strong>, matriculado(a) en el grado <strong>${htmlSeguroMiGrupo(partes.grado)} - ${htmlSeguroMiGrupo(partes.grupo)}</strong>, presenta desempeños pendientes de aprobación en las siguientes áreas y/o asignaturas:
+        </p>
+
+        <h2 class="boletin-section-title">Áreas y/o asignaturas pendientes de aprobación</h2>
+
+        ${tablaMateriasRecuperacionMiGrupo(materiasDetalle)}
+
+        <p class="boletin-text">
+          En atención a lo anterior, y con el propósito de brindar al estudiante oportunidades adicionales para fortalecer los aprendizajes fundamentales y alcanzar los desempeños esperados, se ha dispuesto su participación en la Jornada Institucional de Recuperación Académica, la cual se desarrollará durante los días <strong>${FECHAS_RECUPERACION_TEMP}</strong>, de acuerdo con las orientaciones y actividades definidas por los docentes de las respectivas áreas.
+        </p>
+
+        <p class="boletin-text">
+          La asistencia y participación activa del estudiante en esta jornada constituyen un compromiso fundamental dentro de su proceso formativo, por lo cual se solicita respetuosamente el acompañamiento y apoyo permanente de la familia para garantizar el cumplimiento de las actividades programadas y el aprovechamiento de esta oportunidad académica.
+        </p>
+
+        <p class="boletin-text">
+          El Colegio Los Ángeles San Fernando reafirma su compromiso con la formación integral de sus estudiantes y agradece a las familias la confianza depositada en la institución, así como su valiosa colaboración en el fortalecimiento de los procesos educativos.
+        </p>
+
+        <div class="firma-recuperacion">
+          <p>Cordialmente,</p>
+          <strong>CONSEJO ACADÉMICO Y DE EVALUACIÓN Y PROMOCIÓN</strong><br>
+          Colegio Los Ángeles San Fernando
+        </div>
+
+        <div class="boletin-cierre"></div>
+      </div>
+    </section>`;
+}
+
+function plantillaComunicadosRecuperacionMiGrupo(titulo, cuerpo) {
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${htmlSeguroMiGrupo(titulo)}</title>${cssBoletinPreventivoMiGrupo()}<style>
+    .boletin-acta-title {
+      text-align: center;
+      font-size: 10.5pt;
+      line-height: 1.35;
+      letter-spacing: .3px;
+      margin: 4mm 0 5mm 0;
+      color: #111;
+      text-transform: uppercase;
+    }
+    .recuperacion-table th:nth-child(1),
+    .recuperacion-table td:nth-child(1) {
+      width: 72%;
+    }
+    .recuperacion-table th:nth-child(2),
+    .recuperacion-table td:nth-child(2) {
+      width: 28%;
+      text-align: center;
+    }
+    .firma-recuperacion {
+      margin-top: 8mm;
+      font-size: 9.2pt;
+      line-height: 1.45;
+      color: #111;
+    }
+    .firma-recuperacion p {
+      margin: 0 0 5mm 0;
+    }
+  </style></head><body>
+    <div class="no-print"><button onclick="window.print()">Imprimir / Guardar como PDF</button><button onclick="window.close()">Cerrar</button> ${htmlSeguroMiGrupo(titulo)}</div>
+    ${cuerpo}
+  </body></html>`;
+}
+
+async function descargarComunicadosRecuperacionMiGrupo(grupo) {
+  const ctx = window.__miGrupoReporteContextos?.[grupo];
+  if (!ctx) { toast?.('No hay datos de Mi Grupo para generar comunicados de recuperación', 'err'); return; }
+
+  const estudiantesRecuperacion = (ctx.filas || []).filter(item => materiasPendientesRecuperacionMiGrupo(item).length > 0);
+  if (!estudiantesRecuperacion.length) { toast?.('No hay estudiantes con asignaturas pendientes de aprobación para este corte', 'ok'); return; }
+
+  try {
+    setLoading?.('Generando comunicados de recuperación académica...');
+    const paginas = estudiantesRecuperacion.map(item => plantillaComunicadoRecuperacionEstudianteMiGrupo(ctx, item));
+    const cuerpo = paginas.join('');
+    const html = plantillaComunicadosRecuperacionMiGrupo(`Comunicados de recuperación académica · ${ctx.grupoNombre} · ${ctx.tipoEtiqueta}`, cuerpo);
+    descargarArchivoMiGrupo(`comunicados_recuperacion_${nombreArchivoSeguroMiGrupo(ctx.grupoNombre)}_${nombreArchivoSeguroMiGrupo(ctx.tipoCorte)}.html`, html);
+  } catch (e) {
+    console.error(e);
+    toast?.('No se pudieron generar los comunicados de recuperación', 'err');
+  } finally {
+    clearLoading?.();
+  }
+}
+
+async function descargarComunicadoRecuperacionEstudianteMiGrupo(grupo, indice) {
+  const ctx = window.__miGrupoReporteContextos?.[grupo];
+  if (!ctx) { toast?.('No hay datos del grupo para generar comunicado de recuperación', 'err'); return; }
+
+  const item = ctx.filas[Number(indice)];
+  if (!item) { toast?.('No se encontró el estudiante seleccionado', 'err'); return; }
+
+  const materias = materiasPendientesRecuperacionMiGrupo(item);
+  if (!materias.length) { toast?.('El estudiante no registra asignaturas pendientes de aprobación para este corte', 'ok'); return; }
+
+  try {
+    setLoading?.('Generando comunicado de recuperación académica...');
+    const cuerpo = plantillaComunicadoRecuperacionEstudianteMiGrupo(ctx, item, false);
+    const html = plantillaComunicadosRecuperacionMiGrupo(`Comunicado de recuperación académica · ${item.nombre}`, cuerpo);
+    descargarArchivoMiGrupo(`comunicado_recuperacion_${nombreArchivoSeguroMiGrupo(item.nombre)}_${nombreArchivoSeguroMiGrupo(ctx.grupoNombre)}.html`, html);
+  } catch (e) {
+    console.error(e);
+    toast?.('No se pudo generar el comunicado de recuperación', 'err');
+  } finally {
+    clearLoading?.();
+  }
+}
+// ── FIN RECUPERACIÓN ACADÉMICA V1.62.1 TEMP ────────────────────────────────
+
+
+
+
 function calcularRankingPuestos(filasOrdenadas) {
   // Ranking académico: mejor promedio = Puesto 1
   const conPromedio = filasOrdenadas
@@ -2425,6 +2604,7 @@ function renderTablaMiGrupo(grupo, filasEstudiantes, tipoCorte = 'mitad_periodo_
         <td>
           <button class="btn-secondary btn-sm" onclick="descargarReporteEstudianteMiGrupo('${grupo}', ${idx})">⬇️ Reporte</button>
           <button class="btn-secondary btn-sm" onclick="descargarBoletinEstudianteMiGrupo('${grupo}', ${idx})">📄 Boletín</button>
+          <button class="btn-secondary btn-sm" onclick="descargarComunicadoRecuperacionEstudianteMiGrupo('${grupo}', ${idx})">📝 Recuperación</button>
         </td>
       </tr>`;
   }).join('');
@@ -2434,6 +2614,7 @@ function renderTablaMiGrupo(grupo, filasEstudiantes, tipoCorte = 'mitad_periodo_
       <div class="coord-actions" style="margin-bottom:10px">
         <button class="btn-primary btn-sm" onclick="descargarConsolidadoMiGrupo('${grupo}')">⬇️ Descargar consolidado de notas</button>
         <button class="btn-primary btn-sm" onclick="descargarBoletinesPreventivosMiGrupo('${grupo}')">📄 Boletines preventivos</button>
+        <button class="btn-primary btn-sm" onclick="descargarComunicadosRecuperacionMiGrupo('${grupo}')">📝 Comunicados recuperación</button>
       </div>
       <div class="coord-note" style="margin-bottom:10px">
         Ordenado por caso crítico (más asignaturas perdiendo). El <strong>Puesto</strong> refleja el ranking académico por promedio (1° = mejor promedio del grupo).
