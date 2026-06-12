@@ -11,6 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 
 // ── CONFIGURACIÓN FIREBASE ─────────────────────────────────────────────────
@@ -40,11 +41,19 @@ const LOGO_MIRAI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABgAAAAQACAYAAA
 
 
 // ── BASE DE DATOS DE ESTUDIANTES ───────────────────────────────────────────
-const ESTUDIANTES = {"1A":["CARDONA LARA VALENTINO","CASALLAS PACHECO ISABELLA","CASTRO DIAZ MAXIMILIANO","ALVAREZ COCUY ANTHUAN","DAGUA CARABALI LUCIANA","DIAZ GARCES LAUREN TATIANA","ISAZA ZULUAGA MIA LUCIANA","MARTIN HURTADO MARIA SALOME","RENGIFO MARTINEZ ANTONELLA","MURILLO BEDOYA SOFIA","NARVAEZ ZAPATA JERONIMO","PAZ RIVAS LIAM MATIAS","RIVERA FLOREZ LUCIANA","RODAS MUÑOZ ANTONELLA","RODRIGUEZ ARANGO SAMANTHA","ROJAS JIMENEZ VALERIA","SANCHEZ MONTAÑO THELMA SOPHIA"],"1B":["ARANGO VELEZ THIAGO","ARIAS SERRATO EMILIANO","BUENO SAAVEDRA ANTONIELLA","BURGOS TORRES SUSANA","CASTAÑO BENITO ARIADNA","CASTILLO PINZON VALERIA","GIRALDO MARTINEZ EMILIANO","HOYOS GONZALEZ DOMINICK","MARTINEZ MONDRAGON VALENTINA","MONTOYA VALLEJO JERONIMO","MOSQUERA ARCILA SANTIAGO","RENGIFO MARTINEZ ANTONELLA","SILVA MEDINA ANTONELLA","SOTO ERAZO ANGEL MATIAS","TROCHEZ BATERO CRISTOPHER","URREGO VARGAS PEYTHON","VALENCIA ASTAIZA ANTONELLA","VALENCIA GIRALDO MARTIN"],"2A":["ALONSO VARGAS AINHARA","AYA LONDOÑO GABRIELA","BECOCHE PINO SUSANA","BOLAÑOS FRANCO DYLAN","BOLAÑOS DURANGO ABIGAIL","CARVAJAL GUEVARA JULIANA","CASTRO JEREMY DANIEL","CONDO GONGACHA YAEL","LOPEZ GOMEZ OLIVIA","MERCEDES VENTE ARIANA","MORIBE MARTINEZ YUNA","ORTIZ ANGOLA ALEJANDRO ISAAC","PAEZ AGUILAR ZOE","PASTRANA ARANA CHRISTOPHER","SANCHEZ RAMOS PAOLO RICARDO","SOLIS CALDERON IAN SEBASTIAN","TABIMA LOPEZ DEREK","TORO AHUNCA MATIAS","VARGAS HENAO JACOBO"],"2B":["ARIAS MOLINA MATTEO","BORJA OSPINA EMILIA","BURGOS OVIYUS MARIA CAMILA","CARDONA BETANCOURT ANA SOFIA","CARRILLO VALENZUELA MARIANGEL","DIAZ VILLADA SAMARA","LABRADA GARCIA MATIAS","MOSQUERA SAYA MATIAS","PEREZ PINCHAO ARIATNA SOPHIA","RAMOS OSORIO KAUDER","RENGIFO SOTO GABRIELA","ROJAS OSSO MARIANGEL","VALENCIA CAICEDO ANGELLO","VALENCIA LOURIDO EMMANUEL","VALLADALES ROJAS LIAM","VIVEROS CRIOLLO EMMANUEL"],"3":["ALBAN VASQUEZ GABRIELA","ARIAS MORA SOFIA","BERMUDEZ OSORIO ARIADNA CAROLINA","CALLE GOMEZ DOMINIC","CARDONA LARA MAXIMILIANO","CASTRO DIEZ ISAAC","CEDEÑO CHEMA MATIAS","CERON GONZALEZ MARIANA","CORDOBA MORALES LOUIS MATHEUS","DE LA ROSA PAYAN LUCIA","DIAZ ROSERO GERONIMO","DUQUE CASTAÑO ALLISON","LUCAS CORREA ALANA","MARIN CASANOVA JUAN PABLO","MORENO CABRERA SAMUEL","MURILLO BEDOYA MARIANA","PACHECO PEÑA SALOME","PALACIO FORERO JOSE DAVID","PEÑA JIMENEZ MARTIN","QUESADA CARMONA AYLIN","SALCEDO RESTREPO GABRIELA","SARRIA MOLINA DYLAN","TAPASCO RODRIGUEZ EMMANUEL","TREJOS LULIGO MARTIN ANDRES","VALBUENA OSPINA SARAY"],"4A":["AGUILAR JOJOA EMILY ANDREA","CASTAÑEDA OCHOA VALENTINA","CHAVEZ MOLINA ALEJANDRO","CONDO CONGACHA ALAN JHOSUE","DEL SALTO MUÑOZ CRISSELAIN","GUZMAN CARREÑO SARAY","LOPEZ TORRES GUADALUPE","MORALES RAMIREZ JUAN JOSE","MORENO NUÑEZ JUAN DAVID","OROZCO MARTINEZ ANJALI","ORTIZ CASTAÑO MARIA FERNANDA","PEREA ACOSTA LUCAS","PEREZ CASTRO JERONIMO","PORTILLO CASTAÑO SARAH SOFIA","SEVILLANO POTES DHILYS SAHOMI","TORO MARTINEZ JUAN SEBASTIAN","VERA GIRALDO MIGUEL ANGEL"],"4B":["AYA LONDOÑO GUADALUPE","CAICEDO FALLA ANA BELEN","CARDONA SOLARTE GABRIELA","CARMONA GONZALEZ SOFIA","CRUZ MUÑOZ SARA","CUARTAS CAPOTE VALENTINA","GIRALDO ABRIL ANTONIA","MALDONADO CARDONA ASHANTY MERCEDES","PEREZ AGREDO SAMUEL","RAMIREZ HERNANDEZ SELENA","SENDOYA MACIAS GABRIELA","UMENSA PALACIOS FELIPE","VARGAS FRESNEDA NATHAN","VELASCO MOMPOTES JERÓNIMO","VALENCIA GALEANO MATIAS","NARVAEZ HERNANDEZ ISABELLA"],"5A":["ALCALDE SALAZAR ALEJANDRO","ALZATE OSPINA JERONIMO","BALANTA GIRALDO SANTIAGO","BECOCHE PINO MARIANA","BETANCUR ANGULO MATEO","BORJA BURBANO LUCIANA","CABRERA CARDENAS SAMARA","CARDONA CUASQUEN VALENTINA","LEBAZA SOLANO SAMUEL","MACIAS BENAVIDES GABRIELA","SERRANO GUTIERREZ LUCIANA","TORRES LENIS LUCIANA","VALLEJO GARCES SARA","ZAPATA CORTES NIKOL DAHIAN"],"5B":["ARCINIEGAS LUCIANA","ARIAS NARVAEZ SAMUEL","BOGOTA CAICEDO CHRISTOPHER ALEXANDER","GONZALEZ DURANGO SAMUEL","GRISALES PEREZ SEBASTIAN","GUERRERO FIGUEROA VALERY","HENAO HERRERA ISABELLA","HERNANDEZ OROZCO SOFIA","LOPEZ RAMIREZ ELIVEN","MEDINA GARCIA MATHIAS","MORA ARCE SOFIA","PADILLA HERRAN ALEJANDRO"],"6A":["ALVAREZ ACEVEDO SARA","AREVALO CASTRO JUAN JOSE","CASTILLO MORALES YOSEF BEN DAVID","CASTRO LOPEZ THOMAS SANTIAGO","ENRIQUEZ RODRIGUEZ MARIA PAULA","GARCIA ESTUPIÑAN ISABELLA","HERRERA PARUMA JOSE MARTIN","LORA GUTIERREZ ANTU","LORA RAMOS JUAN FELIPE","MARTINEZ GOMEZ DANIEL","MENDEZ ZAMBRANO JUAN ALEXANDER","MORENO MARIN LUCIANA","MUÑOZ SILVA MARIANA","NOGUERA RAMOS JULIANA","OTALORA MARIA ALEJANDRA","PEREZ AGREDO MARIANA","RAMIREZ MORERA SARA SOFIA","RAMIREZ NIETO JOSE MATIAS","RENDON ATEHORTUA MATIAS","RENGIFO DIAZ JACOBO","RIVERA GARCIA SALOME","RODRIGUEZ APONTE ANA MARIA","TORO AHUNCA SEBASTIAN","TORRES GAMBOA SARA ISABEL","VALENCIA ASTUDILLO SALOME","VALENCIA VALENCIA EMMANUEL"],"6B":["ALBAN VASQUEZ ELIZABETH","ASTUDILLO CORDOBA SARA SOFIA","CANSIMANSE ROMERO DANNA","CARVAJAL GUEVARA ISABELLA","CUCAITA ROMERO JOAQUIN","DUQUE LULIGO DYLAN ANDRES","GAMA AGUIRRE JUAN JOSE","GARIBELLO CALDON SARAH SOPHIA","GRANADA PEREIRA SALOME","IMBACHI VILLADA JACOBO","INSUASTY DUQUE SARA LUCIA","JANSASOY GUAZA LAURA SOFIA","LONDOÑO CARRIAZO MATIAS","MALDONADO CARDONA LIA","PALACIO FORERO JACOB","QUICENO CAYCEDO VIOLETTA","QUINTERO CRIOLLO LUIS ANGEL","QUIÑONEZ VALENCIA GABRIELA","RENGIFO SOTELO MARIA JULIANA","RODRIGUEZ CRUZ MARIANA","ROSERO TORRES HANSEL DANIEL","SARRIA MOLINA JUAN ESTEBAN","SUAREZ MEDINA GLORIA NICOL","VIVAS RESTREPO GUSTAVO ADRIAN"],"7A":["BETANCOURTH PUETATE JULIANA","BONILLA MARTINEZ DULCE MARIA","CAMPOS MENESES ZARETH DUVELIS","CARDONA OSPITIA MATHIAS","CORDOBA BEDOYA MIGUEL ANGEL","DIAZ PALACIO DANNA SOFIA","GOMEZ VALENCIA JUAN JOSE","GUTIERREZ PEREA AMELIE","LOPEZ PACHECO LUIZA VALENTINA","LOSADA HERNANDEZ DULCE MARIA","MENESES IZQUIERDO SOFIA IRENE","MORENO MOSQUERA ALEXANDRA JIRETH","MOSQUERA SANCHEZ VALERY","PEÑA ARCE GENARO ANDRES","RAMIREZ BAUTISTA SAMANTHA","RAMIREZ MUÑOZ ISABELLA","ROMERO OVALLE GABRIEL MATHIAS","SEPULVEDA NOREÑA MATEO","TAPASCO RODRIGUEZ JUAN JOSE","QUIROZ COLLAZOS DAILA VERONICA"],"7B":["AGUIRRE DOMINGUEZ ALIAH","ARIAS COBO HANNA","BERRIO SANDOVAL SANTIAGO","BRICEÑO ANTE LUCIANA","CABRERA CARDENAS SARA","CASAS RODRIGUEZ EMMANUEL","FRANCO CABRERA ISABELLA","GOMEZ GOMEZ VALERIA","GRUESO CARO GUADALUPE","HERNANDEZ GONZALEZ EMMANUEL","HERRERA MARIN ARIANA","LOPEZ ZULUAGA ANTONIA","PACHECO PEÑA YAMID SANTIAGO","RAMOS VILLAQUIRAN SAMUEL","RICAURTE LOPEZ ANTONELLA","SANCHEZ ORDOÑEZ JOHAN ESTEBAN","VILLEGAS RAMIREZ TOMAS","VILLOTA CAICEDO SAMUEL"],"8A":["CABRERA CARDENAS NICOLE SOFIA","DEL SALTO MUÑOZ SEBASTIAN","ESCOBAR GALLEGO FREDDY ALEXANDER","FERNANDEZ ZAMBRANO SANTIAGO","GARCIA POTES MATIAS","GARCIA SALAZAR JACOBO ANDRES","LEDESMA PINILLOS JHOSEPH RODNNY","LOPEZ RAMIREZ LUCIANA","NASTAR RIOS CHRISTOPHER","ORDOÑEZ CHEMA HUGO ANDRES","OREJUELA SERNA MARTIN","PATIÑO LEDESMA KAROL ARIANNA","PERAFAN LLORENTE LUCAS","REPIZO TRUJILLO JUAN SEBASTIAN","RODRIGUEZ CASTRO ISABELLA","RODRIGUEZ SUAREZ JUAN JOSE","VICTORIA NAVARRETE JOAQUIN","ZAFRANE CARVAJAL STEVE"],"8B":["ARELLANO AGUILAR SARA","BALANTA GIRALDO ARIADNA SOFIA","BENAVIDES SERRATE SOFIA","BORJA OSPINA VALENTINA","BRAVO MARTINEZ SALOME","CAICEDO FALLA MARIA JOSE","CARDONA RIVERA MARIANA","CARRILLO VALENZUELA MIGUEL ANGEL","CIFUENTES BOHORQUEZ SAMUEL","FERNANDEZ RODRIGUEZ SEBASTIAN","GARIBELLO RODRIGUEZ ASHLY SARAY","GOMEZ TORO SIMON","GUZMAN CARREÑO SOFIA","MINOTTA PEDROZA SHAIRA ANDREA","SANABRIA SALAZAR ZAIRA KATALEYA","SEVILLANO POTES RACHEL ZULEY","VASQUEZ MORENO VALERIA","VILLOTA CAICEDO LAURA SOFIA","BRIGITTE GARZON CARDONA"],"9A":["CASTAÑO SERNA MATIAS","DOMINGOS CRIOLLO YANNI THALYANA","GARAY JIMENEZ MARIANA","JARAMILLO BENAVIDEZ CARLOS MARIO","MOLINA MORENO CAMILA DEL PILAR","MORA CHIRIMUSCAY VALERY","MURILLO CHIRIMUSCAY JULIANA","PELAEZ PEÑA SARAY","TABIMA LOPEZ MELANIE NATALY","UMAÑA PEREZ GABRIEL"],"9B":["AGUILAR JOJOA RONALD ARLEY","BETANCOURT MEJIA ERIKA SOFIA","CASTRILLON DORADO GABRIELA","CORTES ZUÑIGA ESTEBAN","DELGADO CABEZAS ISABELLA","GUEVARA RAYO MARIA ALEJANDRA","MORA ARCE MARIANA","MOSQUERA ARCILA SEBASTIAN","PEREA FLOREZ MARION SOFIA","POBRE CASTRO JUAN MANUEL","SANCHEZ GIRALDO JUAN DAVID","SANDOVAL CHAVESTAN HARRYSON","VALDES RODRIGUEZ JUAN PABLO","VELEZ ERAZO NICOLAS","VILLAVICENCIO SANTAMARIA DANIELA"],"10A":["ACOSTA OIDOR MELISSA","AGUDELO HENAO LINDESLY NICOL","ALARCON CASTILLO VALERY NICOLE","ANGULO MEDINA ANA ISABEL","CARO GUTIERREZ GABRIELA","CEBALLOS CASTRO MIGUEL ANGEL","CORTEZ URREA MARIA JOSE","FLOREZ GUZMAN GRECIA DEL VALLE","GACHARNA ORTIZ LAURA ISABELLA","GAÑAN DIAZ ANDREA","GARCIA POTES NICOLAS FABRICCIO","GUERRERO AGUIRRE SARA CATALINA","MACIAS ALVAREZ ISABELLA","MARTINEZ VARGAS SARA AINHOA","MONTENEGRO GAVIRIA JOSE MANUEL","RODRIGUEZ ZAMBRANO JUAN ESTEBAN","ROMERO CUERVO RADHA PRIYA","TORRES LENIS DANIEL","VARGAS MONTES SAMUEL ANDRES","VELEZ MUÑOZ JUAN SEBASTIAN","ZAPATA RAMIREZ LUIS GUILLERMO","ZAPATA REYES MARIA JOSE"],"10B":["ACOSTA ROJAS MARIANA","CASTRO PEÑA JUAN DAVID","CUJAR MORENO MARIA JOSE","FLOREZ GUZMAN LUIS FERNANDO","GELVEZ OYAGA SEBASTIAN ALEJANDRO","GIRALDO CASTAÑO CATALINA","GIRALDO PEÑA SAMUEL","GUZMAN RAMOS ANTONIO","LOPEZ GUERRERO KAREN SOFIA","LUGO TOBON JUAN MARTIN","PABLOT MARTINEZ VALENTINA","PERAFAN LLORENTE PEDRO","PERDOMO GUEVARA LAURA SOFIA","QUIÑONES QUINTERO DANIA SARAY","REITA GUEVARA SAMUEL ANDRES","RIVERA DELGADO JUAN ANDRES","ROSALES PERLAZA JUAN JOSE","SOLARTE DURAN JEAN DANEL","SOTO COLORADO MARIA DE LOS ANGELES","TORO GONZALEZ ISABELLA","VALBUENA OSPINA ANGIE MICHEL","VARELA JORDAN JUAN JOSE"],"11A":["ALZATE ORTIZ EMILY","AQUITE ALDANA MARIA JOSE","ARBOLEDA CIFUENTES ANGELICA","BARBOSA QUINTERO NICOLAS ADRIAN","BEDOYA CABRERA ISABELLA","BELTRAN TOLOZA SAHARA LUCIA","BENJUMEA RENDO SAMUEL","BUENO RODRIGUEZ ISABEL SOFIA","CASTRO GUZMAN ISABEL CRISTINA","CORDOBA PALOMINO CARLOS DAVID","ECHEVERRI SERRATO SAMUEL","FILIGRANA RODRIGUZ SAMUEL","GIRALDO PUERTA CAMILA","GIRALDO VARGAS SOFIA","GONZALEZ ERAZO MARIA CAMILA","GORDILLO SILVA JOSE JULIAN","HERNANDEZ MARIN NICOLAS","MENDEZ PEREZ JUAN MANUEL","NOREÑA GOMEZ JUAN DIEGO","PAZ FLOREZ GABRIELA","RAMIREZ BOCANEGRA VALENTINA","RAMIREZ MARTINEZ VALERIA","ROJAS PAZ NICOLLE SOFIA","VALENCIA VALENCIA SHARAY"],"11B":["ANTE LOPEZ NICOLL","BLANCO ECHEVERRY MARIANA","CADAVID GARCIA ISABEL SOFIA","CAMPOS TROCHEZ ANA SOFIA","CANSIMANSI ROMERO JUAN ESTEBAN","CARDONA VELASCO EMMANUEL","CARVAJAL CABEZAS JOSUE VICHENZO","COBO TORRES ELLA SARAY","DIEZ LIBREROS ISABELLA","GARCIA PEREZ MARLON ABDUL","GONZALEZ ROSERO GABRIELA","GUERRERO ABRIL CAROLINE","JIMENEZ ALVARADO JERONIMO","JIMENEZ DELGADO SAMUEL YAHEH","LOZANO RUIZ ALEXANDER","OROZCO GUEVARA AURORA YIREH","RAMIREZ NIETO JUAN MARTIN","SINISTERRA PARRA SARA","SOGAMOSO ESCOBAR NICOLE","ZAPATA MEDINA MARIANGEL"]};
+const ESTUDIANTES = {"1A":["CARDONA LARA VALENTINO","CASALLAS PACHECO ISABELLA","CASTRO DIAZ MAXIMILIANO","ALVAREZ COCUY ANTHUAN","DAGUA CARABALI LUCIANA","DIAZ GARCES LAUREN TATIANA","ISAZA ZULUAGA MIA LUCIANA","MARTIN HURTADO MARIA SALOME","RENGIFO MARTINEZ ANTONELLA","MURILLO BEDOYA SOFIA","NARVAEZ ZAPATA JERONIMO","PAZ RIVAS LIAM MATIAS","RIVERA FLOREZ LUCIANA","RODAS MUÑOZ ANTONELLA","RODRIGUEZ ARANGO SAMANTHA","ROJAS JIMENEZ VALERIA","SANCHEZ MONTAÑO THELMA SOPHIA"],"1B":["ARANGO VELEZ THIAGO","ARIAS SERRATO EMILIANO","BUENO SAAVEDRA ANTONIELLA","BURGOS TORRES SUSANA","CASTAÑO BENITO ARIADNA","CASTILLO PINZON VALERIA","GIRALDO MARTINEZ EMILIANO","HOYOS GONZALEZ DOMINICK","MARTINEZ MONDRAGON VALENTINA","MONTOYA VALLEJO JERONIMO","MOSQUERA ARCILA SANTIAGO","RENGIFO MARTINEZ ANTONELLA","SILVA MEDINA ANTONELLA","SOTO ERAZO ANGEL MATIAS","TROCHEZ BATERO CRISTOPHER","URREGO VARGAS PEYTHON","VALENCIA ASTAIZA ANTONELLA","VALENCIA GIRALDO MARTIN"],"2A":["ALONSO VARGAS AINHARA","AYA LONDOÑO GABRIELA","BECOCHE PINO SUSANA","BOLAÑOS FRANCO DYLAN","BOLAÑOS DURANGO ABIGAIL","CARVAJAL GUEVARA JULIANA","CASTRO JEREMY DANIEL","CONDO GONGACHA YAEL","LOPEZ GOMEZ OLIVIA","MERCEDES VENTE ARIANA","MORIBE MARTINEZ YUNA","ORTIZ ANGOLA ALEJANDRO ISAAC","PAEZ AGUILAR ZOE","PASTRANA ARANA CHRISTOPHER","SANCHEZ RAMOS PAOLO RICARDO","SOLIS CALDERON IAN SEBASTIAN","TABIMA LOPEZ DEREK","TORO AHUNCA MATIAS","VARGAS HENAO JACOBO"],"2B":["ARIAS MOLINA MATTEO","BORJA OSPINA EMILIA","BURGOS OVIYUS MARIA CAMILA","CARDONA BETANCOURT ANA SOFIA","CARRILLO VALENZUELA MARIANGEL","DIAZ VILLADA SAMARA","LABRADA GARCIA MATIAS","MOSQUERA SAYA MATIAS","PEREZ PINCHAO ARIATNA SOPHIA","RAMOS OSORIO KAUDER","RENGIFO SOTO GABRIELA","ROJAS OSSO MARIANGEL","VALENCIA CAICEDO ANGELLO","VALENCIA LOURIDO EMMANUEL","VALLADALES ROJAS LIAM","VIVEROS CRIOLLO EMMANUEL"],"3":["ALBAN VASQUEZ GABRIELA","ARIAS MORA SOFIA","BERMUDEZ OSORIO ARIADNA CAROLINA","CALLE GOMEZ DOMINIC","CARDONA LARA MAXIMILIANO","CASTRO DIEZ ISAAC","CEDEÑO CHEMA MATIAS","CERON GONZALEZ MARIANA","CORDOBA MORALES LOUIS MATHEUS","DE LA ROSA PAYAN LUCIA","DIAZ ROSERO GERONIMO","DUQUE CASTAÑO ALLISON","LUCAS CORREA ALANA","MARIN CASANOVA JUAN PABLO","MORENO CABRERA SAMUEL","MURILLO BEDOYA MARIANA","PACHECO PEÑA SALOME","PALACIO FORERO JOSE DAVID","PEÑA JIMENEZ MARTIN","QUESADA CARMONA AYLIN","SALCEDO RESTREPO GABRIELA","SARRIA MOLINA DYLAN","TAPASCO RODRIGUEZ EMMANUEL","TREJOS LULIGO MARTIN ANDRES","VALBUENA OSPINA SARAY"],"4A":["AGUILAR JOJOA EMILY ANDREA","CASTAÑEDA OCHOA VALENTINA","CHAVEZ MOLINA ALEJANDRO","CONDO CONGACHA ALAN JHOSUE","DEL SALTO MUÑOZ CRISSELAIN","GUZMAN CARREÑO SARAY","LOPEZ TORRES GUADALUPE","MORALES RAMIREZ JUAN JOSE","MORENO NUÑEZ JUAN DAVID","OROZCO MARTINEZ ANJALI","ORTIZ CASTAÑO MARIA FERNANDA","PEREA ACOSTA LUCAS","PEREZ CASTRO JERONIMO","PORTILLO CASTAÑO SARAH SOFIA","SEVILLANO POTES DHILYS SAHOMI","TORO MARTINEZ JUAN SEBASTIAN","VERA GIRALDO MIGUEL ANGEL"],"4B":["AYA LONDOÑO GUADALUPE","CAICEDO FALLA ANA BELEN","CARDONA SOLARTE GABRIELA","CARMONA GONZALEZ SOFIA","CRUZ MUÑOZ SARA","CUARTAS CAPOTE VALENTINA","GIRALDO ABRIL ANTONIA","MALDONADO CARDONA ASHANTY MERCEDES","PEREZ AGREDO SAMUEL","RAMIREZ HERNANDEZ SELENA","SENDOYA MACIAS GABRIELA","UMENSA PALACIOS FELIPE","VARGAS FRESNEDA NATHAN","VELASCO MOMPOTES JERÓNIMO","VALENCIA GALEANO MATIAS","NARVAEZ HERNANDEZ ISABELLA"],"5A":["ALCALDE SALAZAR ALEJANDRO","ALZATE OSPINA JERONIMO","BALANTA GIRALDO SANTIAGO","BECOCHE PINO MARIANA","BETANCUR ANGULO MATEO","BORJA BURBANO LUCIANA","CABRERA CARDENAS SAMARA","CARDONA CUASQUEN VALENTINA","LEBAZA SOLANO SAMUEL","MACIAS BENAVIDES GABRIELA","SERRANO GUTIERREZ LUCIANA","TORRES LENIS LUCIANA","VALLEJO GARCES SARA","ZAPATA CORTES NIKOL DAHIAN"],"5B":["ARCINIEGAS LUCIANA","ARIAS NARVAEZ SAMUEL","BOGOTA CAICEDO CHRISTOPHER ALEXANDER","GONZALEZ DURANGO SAMUEL","GRISALES PEREZ SEBASTIAN","GUERRERO FIGUEROA VALERY","HENAO HERRERA ISABELLA","HERNANDEZ OROZCO SOFIA","LOPEZ RAMIREZ ELIVEN","MEDINA GARCIA MATHIAS","MORA ARCE SOFIA","PADILLA HERRAN ALEJANDRO"],"6A":["ALVAREZ ACEVEDO SARA","AREVALO CASTRO JUAN JOSE","CASTILLO MORALES YOSEF BEN DAVID","CASTRO LOPEZ THOMAS SANTIAGO","ENRIQUEZ RODRIGUEZ MARIA PAULA","GARCIA ESTUPIÑAN ISABELLA","HERRERA PARUMA JOSE MARTIN","LORA GUTIERREZ ANTU","LORA RAMOS JUAN FELIPE","MARTINEZ GOMEZ DANIEL","MENDEZ ZAMBRANO JUAN ALEXANDER","MORENO MARIN LUCIANA","MUÑOZ SILVA MARIANA","NOGUERA RAMOS JULIANA","OTALORA MARIA ALEJANDRA","PEREZ AGREDO MARIANA","RAMIREZ MORERA SARA SOFIA","RAMIREZ NIETO JOSE MATIAS","RENDON ATEHORTUA MATIAS","RENGIFO DIAZ JACOBO","RIVERA GARCIA SALOME","RODRIGUEZ APONTE ANA MARIA","TORO AHUNCA SEBASTIAN","TORRES GAMBOA SARA ISABEL","VALENCIA ASTUDILLO SALOME","VALENCIA VALENCIA EMMANUEL"],"6B":["ALBAN VASQUEZ ELIZABETH","ASTUDILLO CORDOBA SARA SOFIA","CANSIMANSE ROMERO DANNA","CARVAJAL GUEVARA ISABELLA","CUCAITA ROMERO JOAQUIN","DUQUE LULIGO DYLAN ANDRES","GAMA AGUIRRE JUAN JOSE","GARIBELLO CALDON SARAH SOPHIA","GRANADA PEREIRA SALOME","IMBACHI VILLADA JACOBO","INSUASTY DUQUE SARA LUCIA","JANSASOY GUAZA LAURA SOFIA","LONDOÑO CARRIAZO MATIAS","MALDONADO CARDONA LIA","PALACIO FORERO JACOB","QUICENO CAYCEDO VIOLETTA","QUINTERO CRIOLLO LUIS ANGEL","QUIÑONEZ VALENCIA GABRIELA","RENGIFO SOTELO MARIA JULIANA","RODRIGUEZ CRUZ MARIANA","ROSERO TORRES HANSEL DANIEL","SARRIA MOLINA JUAN ESTEBAN","SUAREZ MEDINA GLORIA NICOL","VIVAS RESTREPO GUSTAVO ADRIAN"],"7A":["BETANCOURTH PUETATE JULIANA","BONILLA MARTINEZ DULCE MARIA","CAMPOS MENESES ZARETH DUVELIS","CARDONA OSPITIA MATHIAS","CORDOBA BEDOYA MIGUEL ANGEL","DIAZ PALACIO DANNA SOFIA","GOMEZ VALENCIA JUAN JOSE","GUTIERREZ PEREA AMELIE","LOPEZ PACHECO LUIZA VALENTINA","LOSADA HERNANDEZ DULCE MARIA","MENESES IZQUIERDO SOFIA IRENE","MORENO MOSQUERA ALEXANDRA JIRETH","PEÑA ARCE GENARO ANDRES","RAMIREZ BAUTISTA SAMANTHA","RAMIREZ MUÑOZ ISABELLA","ROMERO OVALLE GABRIEL MATHIAS","SEPULVEDA NOREÑA MATEO","TAPASCO RODRIGUEZ JUAN JOSE","QUIROZ COLLAZOS DAILA VERONICA"],"7B":["AGUIRRE DOMINGUEZ ALIAH","ARIAS COBO HANNA","BRICEÑO ANTE LUCIANA","CABRERA CARDENAS SARA","CASAS RODRIGUEZ EMMANUEL","FRANCO CABRERA ISABELLA","GOMEZ GOMEZ VALERIA","GRUESO CARO GUADALUPE","HERNANDEZ GONZALEZ EMMANUEL","HERRERA MARIN ARIANA","LOPEZ ZULUAGA ANTONIA","PACHECO PEÑA YAMID SANTIAGO","RAMOS VILLAQUIRAN SAMUEL","RICAURTE LOPEZ ANTONELLA","SANCHEZ ORDOÑEZ JOHAN ESTEBAN","VILLEGAS RAMIREZ TOMAS","VILLOTA CAICEDO SAMUEL"],"8A":["CABRERA CARDENAS NICOLE SOFIA","DEL SALTO MUÑOZ SEBASTIAN","FERNANDEZ ZAMBRANO SANTIAGO","GARCIA POTES MATIAS","GARCIA SALAZAR JACOBO ANDRES","LEDESMA PINILLOS JHOSEPH RODNNY","LOPEZ RAMIREZ LUCIANA","NASTAR RIOS CHRISTOPHER","ORDOÑEZ CHEMA HUGO ANDRES","OREJUELA SERNA MARTIN","PATIÑO LEDESMA KAROL ARIANNA","PERAFAN LLORENTE LUCAS","REPIZO TRUJILLO JUAN SEBASTIAN","RODRIGUEZ CASTRO ISABELLA","RODRIGUEZ SUAREZ JUAN JOSE","VICTORIA NAVARRETE JOAQUIN","ZAFRANE CARVAJAL STEVE"],"8B":["ARELLANO AGUILAR SARA","BALANTA GIRALDO ARIADNA SOFIA","BENAVIDES SERRATE SOFIA","BORJA OSPINA VALENTINA","BRAVO MARTINEZ SALOME","CAICEDO FALLA MARIA JOSE","CARDONA RIVERA MARIANA","CARRILLO VALENZUELA MIGUEL ANGEL","CIFUENTES BOHORQUEZ SAMUEL","FERNANDEZ RODRIGUEZ SEBASTIAN","GARIBELLO RODRIGUEZ ASHLY SARAY","GOMEZ TORO SIMON","GUZMAN CARREÑO SOFIA","MINOTTA PEDROZA SHAIRA ANDREA","SANABRIA SALAZAR ZAIRA KATALEYA","SEVILLANO POTES RACHEL ZULEY","VASQUEZ MORENO VALERIA","VILLOTA CAICEDO LAURA SOFIA","BRIGITTE GARZON CARDONA"],"9A":["CASTAÑO SERNA MATIAS","DOMINGOS CRIOLLO YANNI THALYANA","GARAY JIMENEZ MARIANA","JARAMILLO BENAVIDEZ CARLOS MARIO","MOLINA MORENO CAMILA DEL PILAR","MORA CHIRIMUSCAY VALERY","MURILLO CHIRIMUSCAY JULIANA","PELAEZ PEÑA SARAY","TABIMA LOPEZ MELANIE NATALY","UMAÑA PEREZ GABRIEL"],"9B":["AGUILAR JOJOA RONALD ARLEY","BETANCOURT MEJIA ERIKA SOFIA","CASTRILLON DORADO GABRIELA","CORTES ZUÑIGA ESTEBAN","DELGADO CABEZAS ISABELLA","GUEVARA RAYO MARIA ALEJANDRA","MORA ARCE MARIANA","MOSQUERA ARCILA SEBASTIAN","PEREA FLOREZ MARION SOFIA","POBRE CASTRO JUAN MANUEL","SANCHEZ GIRALDO JUAN DAVID","SANDOVAL CHAVESTAN HARRYSON","VALDES RODRIGUEZ JUAN PABLO","VELEZ ERAZO NICOLAS","VILLAVICENCIO SANTAMARIA DANIELA"],"10A":["ACOSTA OIDOR MELISSA","AGUDELO HENAO LINDESLY NICOL","ALARCON CASTILLO VALERY NICOLE","ANGULO MEDINA ANA ISABEL","CARO GUTIERREZ GABRIELA","CEBALLOS CASTRO MIGUEL ANGEL","CORTEZ URREA MARIA JOSE","FLOREZ GUZMAN GRECIA DEL VALLE","GACHARNA ORTIZ LAURA ISABELLA","GAÑAN DIAZ ANDREA","GARCIA POTES NICOLAS FABRICCIO","GUERRERO AGUIRRE SARA CATALINA","MACIAS ALVAREZ ISABELLA","MARTINEZ VARGAS SARA AINHOA","MONTENEGRO GAVIRIA JOSE MANUEL","RODRIGUEZ ZAMBRANO JUAN ESTEBAN","ROMERO CUERVO RADHA PRIYA","TORRES LENIS DANIEL","VARGAS MONTES SAMUEL ANDRES","VELEZ MUÑOZ JUAN SEBASTIAN","ZAPATA RAMIREZ LUIS GUILLERMO","ZAPATA REYES MARIA JOSE"],"10B":["ACOSTA ROJAS MARIANA","CASTRO PEÑA JUAN DAVID","CUJAR MORENO MARIA JOSE","FLOREZ GUZMAN LUIS FERNANDO","GELVEZ OYAGA SEBASTIAN ALEJANDRO","GIRALDO CASTAÑO CATALINA","GIRALDO PEÑA SAMUEL","GUZMAN RAMOS ANTONIO","LOPEZ GUERRERO KAREN SOFIA","LUGO TOBON JUAN MARTIN","PABLOT MARTINEZ VALENTINA","PERAFAN LLORENTE PEDRO","PERDOMO GUEVARA LAURA SOFIA","QUIÑONES QUINTERO DANIA SARAY","REITA GUEVARA SAMUEL ANDRES","RIVERA DELGADO JUAN ANDRES","ROSALES PERLAZA JUAN JOSE","SOLARTE DURAN JEAN DANEL","SOTO COLORADO MARIA DE LOS ANGELES","TORO GONZALEZ ISABELLA","VALBUENA OSPINA ANGIE MICHEL","VARELA JORDAN JUAN JOSE"],"11A":["ALZATE ORTIZ EMILY","AQUITE ALDANA MARIA JOSE","ARBOLEDA CIFUENTES ANGELICA","BARBOSA QUINTERO NICOLAS ADRIAN","BEDOYA CABRERA ISABELLA","BELTRAN TOLOZA SAHARA LUCIA","BENJUMEA RENDO SAMUEL","BUENO RODRIGUEZ ISABEL SOFIA","CASTRO GUZMAN ISABEL CRISTINA","CORDOBA PALOMINO CARLOS DAVID","ECHEVERRI SERRATO SAMUEL","FILIGRANA RODRIGUZ SAMUEL","GIRALDO PUERTA CAMILA","GIRALDO VARGAS SOFIA","GONZALEZ ERAZO MARIA CAMILA","GORDILLO SILVA JOSE JULIAN","HERNANDEZ MARIN NICOLAS","MENDEZ PEREZ JUAN MANUEL","NOREÑA GOMEZ JUAN DIEGO","PAZ FLOREZ GABRIELA","RAMIREZ BOCANEGRA VALENTINA","RAMIREZ MARTINEZ VALERIA","ROJAS PAZ NICOLLE SOFIA","VALENCIA VALENCIA SHARAY"],"11B":["ANTE LOPEZ NICOLL","BLANCO ECHEVERRY MARIANA","CADAVID GARCIA ISABEL SOFIA","CAMPOS TROCHEZ ANA SOFIA","CANSIMANSI ROMERO JUAN ESTEBAN","CARDONA VELASCO EMMANUEL","CARVAJAL CABEZAS JOSUE VICHENZO","COBO TORRES ELLA SARAY","DIEZ LIBREROS ISABELLA","GARCIA PEREZ MARLON ABDUL","GONZALEZ ROSERO GABRIELA","GUERRERO ABRIL CAROLINE","JIMENEZ ALVARADO JERONIMO","JIMENEZ DELGADO SAMUEL YAHEH","LOZANO RUIZ ALEXANDER","OROZCO GUEVARA AURORA YIREH","RAMIREZ NIETO JUAN MARTIN","SINISTERRA PARRA SARA","SOGAMOSO ESCOBAR NICOLE","ZAPATA MEDINA MARIANGEL"]};
 
 const GRUPOS_ORDEN = ["1A","1B","2A","2B","3","4A","4B","5A","5B","6A","6B","7A","7B","8A","8B","9A","9B","10A","10B","11A","11B"];
 const CODIGOS_ESPECIALES = ["NP","AUS","EXC","PLA","IA"];
 const MIN_APROBATORIO = 3.8;
+
+// Redondeo pedagógico: 3.75–3.99 → 3.8 (política institucional)
+function aplicarRedondeoEspecial(nota) {
+  const n = Number(nota);
+  if (!isFinite(n)) return n;
+  if (n >= 3.75 && n < 4.0) return 3.8;
+  return n;
+}
 
 const USUARIOS = {
   "morenofabian.documentosclasf@gmail.com": {
@@ -99,7 +108,7 @@ const USUARIOS = {
     ],
     "materias": {}
   },
-  "martaperez.clasf@gmail.com": {
+  "naggy9427@gmail.com": {
     "nombre": "Martha Cecilia Pérez Montoya",
     "rol": "docente",
     "estado": "confirmado",
@@ -1500,7 +1509,7 @@ function promedioEstudiantilMiGrupo(item) {
     m && m.estado !== 'sin_informacion' && m.nota !== null && m.nota !== undefined && !Number.isNaN(Number(m.nota))
   );
   if (!materiasValidas.length) return null;
-  const suma = materiasValidas.reduce((acc, m) => acc + Number(m.nota), 0);
+  const suma = materiasValidas.reduce((acc, m) => acc + aplicarRedondeoEspecial(Number(m.nota)), 0);
   return Number((suma / materiasValidas.length).toFixed(2));
 }
 
@@ -1711,7 +1720,7 @@ function textoNotaReporteMiGrupo(registro) {
   if (!registro) return '—';
   if (registro.estado === 'sin_informacion') return 'S/I';
   if (registro.nota === null || registro.nota === undefined || Number.isNaN(Number(registro.nota))) return 'S/I';
-  return Number(registro.nota).toFixed(2);
+  return aplicarRedondeoEspecial(Number(registro.nota)).toFixed(2);
 }
 
 function construirTablaConsolidadoMiGrupo(ctx) {
@@ -2356,6 +2365,22 @@ async function descargarBoletinEstudianteMiGrupo(grupo, indice) {
   }
 }
 
+function calcularRankingPuestos(filasOrdenadas) {
+  // Ranking académico: mejor promedio = Puesto 1
+  const conPromedio = filasOrdenadas
+    .map((item, idx) => ({ idx, promedio: item.promedioEstudiantil ?? promedioEstudiantilMiGrupo(item) }))
+    .filter(x => x.promedio !== null && x.promedio !== undefined);
+  conPromedio.sort((a, b) => b.promedio - a.promedio);
+
+  const puestoMap = {};
+  let puesto = 1;
+  for (let i = 0; i < conPromedio.length; i++) {
+    if (i > 0 && conPromedio[i].promedio !== conPromedio[i - 1].promedio) puesto = i + 1;
+    puestoMap[conPromedio[i].idx] = puesto;
+  }
+  return puestoMap;
+}
+
 function renderTablaMiGrupo(grupo, filasEstudiantes, tipoCorte = 'mitad_periodo_pac') {
   const filasOrdenadas = ordenarFilasMiGrupo(filasEstudiantes);
   const materias = Array.from(new Set(
@@ -2367,16 +2392,17 @@ function renderTablaMiGrupo(grupo, filasEstudiantes, tipoCorte = 'mitad_periodo_
     return `<div class="coord-empty">No hay estudiantes reportados para ${nombreGrupo(grupo)} en el corte seleccionado.</div>`;
   }
 
+  const puestoMap = calcularRankingPuestos(filasOrdenadas);
   const head = materias.map(m => `<th>${m}</th>`).join('');
   const body = filasOrdenadas.map((item, idx) => {
     const mapa = construirMapaMateriasDeDirector(item);
     const celdas = materias.map(materia => {
       const registro = mapa[materia];
       if (!registro) return `<td class="td-empty">—</td>`;
-      const texto = registro.estado === 'sin_informacion' ? 'S/I' : (registro.nota ?? 'Al día');
+      const texto = registro.estado === 'sin_informacion' ? 'S/I' : aplicarRedondeoEspecial(Number(registro.nota ?? 0)).toFixed(2);
       const titulo = registro.estado === 'sin_informacion'
         ? 'Sin información suficiente para el corte'
-        : `${registro.materia || materia}: ${registro.nota}`;
+        : `${registro.materia || materia}: ${texto}`;
       return `<td title="${titulo}"><span class="materia-chip ${colorEstadoReporte(registro.estado)}">${texto}</span></td>`;
     }).join('');
 
@@ -2384,9 +2410,14 @@ function renderTablaMiGrupo(grupo, filasEstudiantes, tipoCorte = 'mitad_periodo_
     const promedioHtml = promedio === null
       ? '<span class="materia-chip estado-sininfo">S/I</span>'
       : `<span class="materia-chip ${promedio < MIN_APROBATORIO ? 'estado-perdiendo' : 'estado-ok'}">${promedio.toFixed(2)}</span>`;
+    const puestoNum = puestoMap[idx];
+    const puestoHtml = puestoNum !== undefined
+      ? `<span style="font-weight:800;color:${puestoNum<=3?'#0055a5':'var(--text1)'};">${puestoNum}°</span>`
+      : '<span style="color:var(--text2)">S/I</span>';
 
     return `
       <tr>
+        <td style="text-align:center;">${puestoHtml}</td>
         <td><strong>${item.nombre}</strong></td>
         <td><span class="badge-pill badge-red">${item.perdiendoCount || 0}</span></td>
         <td>${promedioHtml}</td>
@@ -2405,12 +2436,13 @@ function renderTablaMiGrupo(grupo, filasEstudiantes, tipoCorte = 'mitad_periodo_
         <button class="btn-primary btn-sm" onclick="descargarBoletinesPreventivosMiGrupo('${grupo}')">📄 Boletines preventivos</button>
       </div>
       <div class="coord-note" style="margin-bottom:10px">
-        Ordenado de caso crítico a caso menos crítico: primero mayor número de asignaturas por debajo de ${MIN_APROBATORIO}, luego materias sin información, luego menor promedio estudiantil.
+        Ordenado por caso crítico (más asignaturas perdiendo). El <strong>Puesto</strong> refleja el ranking académico por promedio (1° = mejor promedio del grupo).
       </div>
       <div class="tabla-scroll">
         <table class="coord-table">
           <thead>
             <tr>
+              <th>Puesto</th>
               <th>Estudiante</th>
               <th>Asignaturas perdiendo</th>
               <th>Promedio estudiantil</th>
@@ -2635,16 +2667,23 @@ async function calcularEstadisticasEnVivo() {
 
 async function cargarEstadisticasEnVivo() {
   const div = $('coord-live-analytics');
+  const divGraficas = $('coord-graficas-stats');
   if (!div) return;
   div.innerHTML = '<div class="coord-loading-msg"><span class="analytics-spinner"></span> Calculando estadísticas en vivo...</div>';
+  if (divGraficas) divGraficas.innerHTML = '<div class="coord-loading-msg"><span class="analytics-spinner"></span> Generando gráficas estadísticas...</div>';
   try {
     const stats = await calcularEstadisticasEnVivo();
     div.innerHTML = renderAnalyticsPanel(stats);
     const btnRefresh = $('btn-refresh-analytics');
     if (btnRefresh) btnRefresh.onclick = () => cargarEstadisticasEnVivo();
+    if (divGraficas) {
+      divGraficas.innerHTML = renderModuloGraficasCoordinacion(stats);
+      requestAnimationFrame(() => inicializarGraficasCoordinacion());
+    }
   } catch (e) {
     console.error('Error calculando estadísticas en vivo:', e);
     div.innerHTML = '<div class="coord-empty">No se pudieron calcular las estadísticas en vivo. Intenta de nuevo.</div>';
+    if (divGraficas) divGraficas.innerHTML = '<div class="coord-empty">No se pudieron generar las gráficas.</div>';
   }
 }
 
@@ -2763,6 +2802,243 @@ function renderAnalyticsPanel(stats) {
 }
 
 // ── FIN BLOQUE RECUPERADO DESDE V1.59 ───────────────────────────────────────────────
+
+
+// ── INFORME ESTADÍSTICO POR GRADO · COORDINACIÓN ────────────────────────────
+
+function renderInformeEstadisticoPorGrado(detalle) {
+  if (!detalle?.estudiantes?.length) {
+    return `<div class="coord-section"><div class="coord-empty">No hay datos de corte para generar el informe por grado.</div></div>`;
+  }
+
+  // Agrupar estudiantes por grupo
+  const porGrupo = {};
+  detalle.estudiantes.forEach(item => {
+    const g = item.grupo;
+    if (!porGrupo[g]) porGrupo[g] = [];
+    porGrupo[g].push(item);
+  });
+
+  // Ordenar grupos según GRUPOS_ORDEN
+  const grupos = Object.keys(porGrupo).sort((a, b) => {
+    const ia = GRUPOS_ORDEN.indexOf(a), ib = GRUPOS_ORDEN.indexOf(b);
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+  });
+
+  const bloques = grupos.map(grupo => {
+    const filas = porGrupo[grupo];
+    const promediosPorEstudiante = filas.map(item => {
+      const vals = (item.materias || [])
+        .filter(m => m && m.estado !== 'sin_informacion' && m.nota !== null && m.nota !== undefined && !Number.isNaN(Number(m.nota)))
+        .map(m => aplicarRedondeoEspecial(Number(m.nota)));
+      return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+    });
+
+    const validos = promediosPorEstudiante.filter(v => v !== null);
+    const promedioGrupal = validos.length
+      ? (validos.reduce((s, v) => s + v, 0) / validos.length)
+      : null;
+
+    // Ranking: ordenar por promedio desc para asignar puestos
+    const ranking = filas
+      .map((item, i) => ({ nombre: item.nombre, promedio: promediosPorEstudiante[i] }))
+      .sort((a, b) => {
+        if (a.promedio === null && b.promedio === null) return 0;
+        if (a.promedio === null) return 1;
+        if (b.promedio === null) return -1;
+        return b.promedio - a.promedio;
+      });
+
+    // Asignar puestos con empates
+    let puesto = 1;
+    ranking.forEach((r, i) => {
+      if (i > 0 && r.promedio !== null && r.promedio !== ranking[i - 1].promedio) puesto = i + 1;
+      r.puesto = r.promedio !== null ? puesto : null;
+    });
+
+    const filasHtml = ranking.map(r => `
+      <tr>
+        <td style="text-align:center;font-weight:800;color:${r.puesto && r.puesto <= 3 ? '#0055a5' : 'var(--text1)'};">
+          ${r.puesto !== null ? r.puesto + '°' : '<span style="color:var(--text2)">S/I</span>'}
+        </td>
+        <td>${htmlSeguroMiGrupo(r.nombre)}</td>
+        <td>
+          ${r.promedio !== null
+            ? `<span class="materia-chip ${r.promedio < MIN_APROBATORIO ? 'estado-perdiendo' : 'estado-ok'}">${r.promedio.toFixed(2)}</span>`
+            : '<span class="materia-chip estado-sininfo">S/I</span>'}
+        </td>
+      </tr>`).join('');
+
+    return `
+      <div class="coord-subsection" style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+          <h4 style="margin:0;">${nombreGrupo(grupo)} <span style="font-weight:400;color:var(--text2);font-size:13px;">(${filas.length} estudiantes)</span></h4>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:13px;color:var(--text2);">Promedio grupal:</span>
+            <span class="coord-summary-num" style="font-size:22px;line-height:1;">
+              ${promedioGrupal !== null
+                ? `<span style="color:${promedioGrupal < MIN_APROBATORIO ? 'var(--red,#e55)' : 'var(--green,#22c55e)'}">${promedioGrupal.toFixed(2)}</span>`
+                : '<span style="color:var(--text2)">S/I</span>'}
+            </span>
+          </div>
+        </div>
+        <div class="tabla-scroll">
+          <table class="coord-table" style="max-width:460px;">
+            <thead><tr><th>Puesto</th><th>Estudiante</th><th>Promedio</th></tr></thead>
+            <tbody>${filasHtml}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="coord-section" id="coord-informe-grado">
+      <div class="coord-section-head">
+        <h3>Informe estadístico por grado</h3>
+        <div class="coord-meta-inline">
+          <span>Ranking académico · Puesto 1 = mejor promedio del grupo</span>
+        </div>
+      </div>
+      <p class="coord-note">Promedios calculados con notas individuales por asignatura (se excluyen las marcadas como Sin información). Se aplica redondeo pedagógico: 3.75–3.99 → 3.8.</p>
+      ${bloques || '<div class="coord-empty">Sin datos de grupos.</div>'}
+    </div>`;
+}
+
+
+// ── MÓDULO DE GRÁFICAS ESTADÍSTICAS · COORDINACIÓN ──────────────────────────
+
+let _graficasInstancias = {};
+
+function destruirGraficasPrevias() {
+  Object.values(_graficasInstancias).forEach(c => { try { c.destroy(); } catch(_) {} });
+  _graficasInstancias = {};
+}
+
+function renderModuloGraficasCoordinacion(stats) {
+  const { rankingMaterias } = stats;
+  if (!rankingMaterias || !rankingMaterias.length) {
+    return `<div class="coord-section"><div class="coord-empty">Sin datos suficientes para generar gráficas.</div></div>`;
+  }
+
+  const materiasOrdenadas = [...rankingMaterias].sort((a, b) => b.pctComplejidad - a.pctComplejidad).slice(0, 15);
+  const tortasHtml = rankingMaterias.slice(0, 12).map((m, i) => `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;">
+      <strong style="font-size:11px;text-align:center;color:var(--text1);min-height:28px;">${m.materia}</strong>
+      <canvas id="chart-torta-${i}" width="120" height="120"></canvas>
+      <span style="font-size:10px;color:var(--text2);">${m.total} estudiantes</span>
+    </div>`).join('');
+
+  // Serializar datos para uso posterior en inicializarGraficasCoordinacion
+  window.__graficasStatsCoord = {
+    totalOk:   rankingMaterias.reduce((s, m) => s + (m.total - m.perdiendo - m.sinInformacion), 0),
+    totalPerd: rankingMaterias.reduce((s, m) => s + m.perdiendo, 0),
+    totalSI:   rankingMaterias.reduce((s, m) => s + m.sinInformacion, 0),
+    labelsBar: materiasOrdenadas.map(m => m.materia),
+    dataPerd:  materiasOrdenadas.map(m => m.perdiendo),
+    dataSI:    materiasOrdenadas.map(m => m.sinInformacion),
+    dataOk:    materiasOrdenadas.map(m => m.total - m.perdiendo - m.sinInformacion),
+    tortaData: rankingMaterias.slice(0, 12).map(m => ({
+      ok: m.total - m.perdiendo - m.sinInformacion,
+      perd: m.perdiendo,
+      si: m.sinInformacion
+    }))
+  };
+
+  return `
+    <div class="coord-section" id="coord-graficas">
+      <div class="coord-section-head">
+        <h3>Módulo estadístico · Gráficas</h3>
+        <div class="coord-meta-inline">
+          <span class="analytics-live-badge">EN VIVO</span>
+          <span style="font-size:12px;color:var(--text2);">Identifica dificultades de enseñanza por asignatura</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;">
+          <h4 style="margin:0 0 12px;">Distribución global de estudiantes</h4>
+          <p class="coord-note" style="margin-bottom:10px;">Proporción general entre estudiantes aprobando, perdiendo y sin información en todas las asignaturas.</p>
+          <div style="display:flex;justify-content:center;">
+            <canvas id="chart-global-pie" width="240" height="240"></canvas>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;">
+          <h4 style="margin:0 0 12px;">Top 15 asignaturas con mayor dificultad</h4>
+          <p class="coord-note" style="margin-bottom:10px;">Barras apiladas: <span style="color:#ef4444;font-weight:700;">■</span> perdiendo · <span style="color:#f59e0b;font-weight:700;">■</span> sin información · <span style="color:#22c55e;font-weight:700;">■</span> aprobando.</p>
+          <canvas id="chart-barras-asig" height="340"></canvas>
+        </div>
+      </div>
+
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;">
+        <h4 style="margin:0 0 8px;">Distribución interna por asignatura</h4>
+        <p class="coord-note" style="margin-bottom:14px;">Cada torta muestra la distribución de estudiantes dentro de la asignatura. Permite identificar cuáles concentran más dificultades de aprendizaje.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;">
+          ${tortasHtml}
+        </div>
+      </div>
+    </div>`;
+}
+
+function inicializarGraficasCoordinacion() {
+  const d = window.__graficasStatsCoord;
+  if (!d || typeof Chart === 'undefined') return;
+
+  const COLORES = { ok: '#22c55e', perd: '#ef4444', si: '#f59e0b' };
+
+  function crearChart(id, tipo, labels, datasets, opciones = {}) {
+    const canvas = document.getElementById(id);
+    if (!canvas) return;
+    if (canvas._chartInst) { try { canvas._chartInst.destroy(); } catch(_) {} }
+    canvas._chartInst = new Chart(canvas, {
+      type: tipo,
+      data: { labels, datasets },
+      options: {
+        responsive: tipo !== 'doughnut',
+        plugins: {
+          legend: { display: !!opciones.legend, position: 'bottom', labels: { font: { size: 11 } } },
+          tooltip: { enabled: true }
+        },
+        ...(opciones.extra || {})
+      }
+    });
+  }
+
+  crearChart('chart-global-pie', 'doughnut',
+    ['Aprobando', 'Perdiendo', 'Sin información'],
+    [{ data: [d.totalOk, d.totalPerd, d.totalSI], backgroundColor: [COLORES.ok, COLORES.perd, COLORES.si], borderWidth: 2 }],
+    { legend: true }
+  );
+
+  const barCanvas = document.getElementById('chart-barras-asig');
+  if (barCanvas) {
+    if (barCanvas._chartInst) { try { barCanvas._chartInst.destroy(); } catch(_) {} }
+    barCanvas._chartInst = new Chart(barCanvas, {
+      type: 'bar',
+      data: {
+        labels: d.labelsBar,
+        datasets: [
+          { label: 'Perdiendo',        data: d.dataPerd, backgroundColor: COLORES.perd },
+          { label: 'Sin información',  data: d.dataSI,   backgroundColor: COLORES.si  },
+          { label: 'Aprobando',        data: d.dataOk,   backgroundColor: COLORES.ok  }
+        ]
+      },
+      options: {
+        responsive: true,
+        indexAxis: 'y',
+        scales: { x: { stacked: true }, y: { stacked: true, ticks: { font: { size: 10 } } } },
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+      }
+    });
+  }
+
+  d.tortaData.forEach((td, i) => {
+    crearChart('chart-torta-' + i, 'doughnut',
+      ['Aprobando', 'Perdiendo', 'Sin info'],
+      [{ data: [td.ok, td.perd, td.si], backgroundColor: [COLORES.ok, COLORES.perd, COLORES.si], borderWidth: 1 }],
+      { legend: false }
+    );
+  });
+}
 
 
 // ── AUDITORÍA DE PLANILLAS V1.61 · SOLO LECTURA PARA COORDINACIÓN ──────────
@@ -3121,9 +3397,13 @@ async function renderCoordinationPanel(forzarRefresco = false) {
 
         ${renderDashboardCoordinacion(metricasDashboard)}
 
+        ${ultimo && detalle ? renderInformeEstadisticoPorGrado(detalle) : ''}
+
         ${renderAuditoriaPlanillasPanel()}
 
         <div id="coord-live-analytics"><div class="coord-loading-msg"><span class="analytics-spinner"></span> Calculando estadísticas en vivo...</div></div>
+
+        <div id="coord-graficas-stats"><div class="coord-loading-msg"><span class="analytics-spinner"></span> Generando gráficas estadísticas...</div></div>
 
         <div class="coord-grid">
           <div class="coord-card">
